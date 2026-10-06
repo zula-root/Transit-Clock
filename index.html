@@ -1,0 +1,789 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<meta charset="utf-8">
+<title>Transit Clock</title>
+<meta name="theme-color" content="#0f1820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a sentence set like a book, a departure-board strip under it, and a dot-matrix map that flies to each route */
+:root {
+  --bg: #eef0f2;
+  --fg: #14202b;
+  --muted: #5a6774;
+  --line: #c6ced6;
+  --sign: #f2b33d;
+  --sign-ink: #14202b;
+  --route: #c27c0e;
+  --dot: #33414d;
+  --accent: #9a6311;
+  --serif: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --sans: "Overpass", "Helvetica Neue", Arial, sans-serif;
+  --mono: "Overpass Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1820; --fg: #e6ebee; --muted: #8a99a6; --line: #26343f;
+    --sign: #f2b33d; --sign-ink: #10181f; --route: #f2b33d; --dot: #c9d3da; --accent: #f2b33d; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1820; --fg: #e6ebee; --muted: #8a99a6; --line: #26343f;
+  --sign: #f2b33d; --sign-ink: #10181f; --route: #f2b33d; --dot: #c9d3da; --accent: #f2b33d; color-scheme: dark;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--sans);
+  padding-inline: clamp(16px, 6vw, 96px);
+  padding-block: 0;
+  display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+
+header, footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px 20px; flex-wrap: wrap;
+  padding-block: 20px;
+  font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted);
+}
+header .brand { color: var(--fg); font-weight: 800; }
+header .now { font-family: var(--mono); letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+header { position: relative; }
+header .today {
+  font: inherit; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: inherit; opacity: .8; background: none; border: 0; padding: 0; cursor: pointer;
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+header .today:hover, header .today[aria-expanded="true"] { opacity: 1; color: var(--fg); }
+.fact-card {
+  position: absolute; top: calc(100% - 6px); right: 0; z-index: 10;
+  width: min(340px, 100%); padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 10px 30px -12px rgba(0, 0, 0, .35);
+  text-transform: none; letter-spacing: 0;
+}
+.fact-card[hidden] { display: none; }
+.fact-card .eyebrow { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.fact-card .fact { display: flex; flex-direction: column; gap: 3px; }
+.fact-card .headline { margin: 0; font-family: var(--serif); font-size: 22px; line-height: 1.2; }
+.fact-card dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; }
+.fact-card dt { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+.fact-card dd { margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.35; min-width: 0; }
+.fact-card dd .tm { font-family: var(--sans); font-weight: 700; font-variant-numeric: tabular-nums; }
+.fact-card dd .pl { color: var(--muted); font-style: italic; }
+.fact-card .note { margin: 0; font-family: var(--serif); font-size: 14px; font-style: italic; color: var(--muted); }
+.fact-card .foot { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+header .right { display: flex; align-items: center; gap: 16px; }
+
+.modes { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
+.modes button {
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--muted);
+  background: none; border: 0; border-radius: 999px; padding: 6px 12px 4px; cursor: pointer;
+}
+.modes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+.modes .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
+.modes button[aria-pressed="true"] .live-dot { background: var(--sign); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+
+main {
+  margin-top: auto; max-width: 46rem; min-width: 0;
+  display: flex; flex-direction: column; gap: 32px;
+  padding-block: 16px;
+  transition: opacity .45s ease;
+}
+main.fading { opacity: 0; }
+
+.quote {
+  margin: 0;
+  font-family: var(--serif); font-weight: 350; font-optical-sizing: auto;
+  font-size: clamp(1.7rem, 4.6vw, 3.1rem); line-height: 1.22; letter-spacing: -.01em;
+  text-wrap: pretty;
+}
+.quote .then { display: block; margin-top: .5em; font-size: .62em; line-height: 1.4; color: var(--muted); font-style: italic; }
+.time {
+  font-family: var(--sans); font-weight: 800; font-size: .78em; letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  background: var(--sign); color: var(--sign-ink);
+  padding: .02em .28em 0; border-radius: .14em;
+  white-space: nowrap;
+}
+
+/* departure-board strip: origin ●━━━━○ terminus */
+.route { display: grid; grid-template-columns: minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 14px; }
+.route .stop { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.route .stop:last-child { text-align: right; }
+.route .name { font-family: var(--mono); font-weight: 600; font-size: 14px; letter-spacing: .04em; text-transform: uppercase; overflow-wrap: anywhere; }
+.route .clock { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.route .native { font-size: 13px; color: var(--muted); letter-spacing: .06em; }
+.track { position: relative; height: 2px; background: var(--line); min-width: 48px; }
+.track::before, .track::after {
+  content: ""; position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+  transform: translateY(-50%); background: var(--bg); border: 2px solid var(--fg);
+}
+.track::before { left: -2px; background: var(--fg); }
+.track::after { right: -2px; }
+.track span {
+  position: absolute; left: 50%; top: -22px; transform: translateX(-50%);
+  font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+
+.cite { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.cite b { color: var(--fg); font-weight: 600; }
+
+.map { padding-top: 12px; margin-bottom: auto; display: flex; flex-direction: column; gap: 8px; }
+.map canvas {
+  display: block; width: 100%; max-width: 100%; aspect-ratio: 2 / 1; max-height: 58vh; min-height: 220px;
+  border-radius: 10px; outline: 1px solid var(--line); outline-offset: -1px;
+}
+.mapframe { position: relative; }
+.map .zoom {
+  position: absolute; top: 10px; right: 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 12px 5px; cursor: pointer;
+}
+.map .zoom:hover { border-color: var(--fg); }
+.map .zoom[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.map .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--muted); }
+
+footer button.next {
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--fg);
+  background: none; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px 6px; cursor: pointer;
+}
+footer button.next:hover, .modes button:hover { color: var(--fg); }
+footer button.next:hover { border-color: var(--fg); }
+button:focus-visible, canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.map canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+footer .count { font-family: var(--mono); letter-spacing: .04em; }
+footer .controls { display: flex; gap: 12px; align-items: center; }
+.status { font-family: var(--serif); font-size: 1.4rem; color: var(--muted); }
+
+/* #widget: the phone home-screen size, for previewing the eventual widget */
+body.widget { justify-content: center; align-items: center; }
+body.widget header, body.widget footer, body.widget .route, body.widget .then, body.widget .map { display: none; }
+body.widget main {
+  width: min(340px, 100%); aspect-ratio: 1; max-width: 100%; justify-content: space-between; gap: 12px;
+  padding: 20px; border-radius: 22px; background: var(--fg); color: var(--bg);
+}
+body.widget .quote { font-size: 1.32rem; line-height: 1.25; }
+body.widget .cite { color: var(--bg); opacity: .7; font-size: 10px; }
+body.widget .cite b { color: var(--bg); }
+
+@media (max-width: 560px) {
+  .map canvas { aspect-ratio: 5 / 4; }
+  .route { grid-template-columns: 1fr; gap: 10px; }
+  .route .stop:last-child { text-align: left; }
+  .track { margin-block: 16px 4px; }
+  header .now, header .sep { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { main { transition: none; } .modes .live-dot { animation: none !important; } }
+</style>
+
+<header>
+  <span class="brand">Transit Clock</span>
+  <span class="right">
+    <span class="modes" role="group" aria-label="What to show">
+      <button type="button" id="mode-clock" aria-pressed="true">Your clock</button>
+      <button type="button" id="mode-live" aria-pressed="false"><span class="live-dot"></span>Live</button>
+    </span>
+    <span class="now-wrap"><button type="button" class="today" id="today" aria-expanded="false" aria-controls="fact"></button><span class="sep" aria-hidden="true"> · </span><span class="now" id="now">--:--</span></span>
+  </span>
+  <div class="fact-card" id="fact" role="dialog" aria-label="Today on the timetables" hidden></div>
+</header>
+
+<main id="card" aria-live="polite">
+  <p class="status">Checking the timetable…</p>
+</main>
+
+<div class="map" id="mapwrap">
+  <div class="mapframe">
+    <canvas id="map" tabindex="0" aria-label="World map showing where this departure is"></canvas>
+    <button type="button" class="zoom" id="zoom" aria-pressed="false">Zoom in</button>
+  </div>
+  <div class="legend"><span>● leaving</span><span>○ arriving</span><span>◦ other departures this minute</span><span id="maphint">Tap a ring to jump to that departure.</span></div>
+</div>
+
+<footer>
+  <span id="hint">Every minute, somewhere, something leaves on time.</span>
+  <span class="controls">
+    <span class="count" id="count"></span>
+    <button class="next" id="next" type="button">Another departure</button>
+  </span>
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+/* ------------------------------------------------------------ data */
+const files = {};
+const load = name => files[name] ??= fetch(`data/${name}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+const hour = h => load(pad(h));
+
+const fmtCache = {};
+function localKey(tz, date) {
+  const f = fmtCache[tz] ??= new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  return f.format(date);
+}
+let allEntries = null; // flattened, for live mode
+async function everything() {
+  if (allEntries) return allEntries;
+  const hours = await Promise.all(Array.from({ length: 24 }, (_, h) => hour(h)));
+  allEntries = [];
+  hours.forEach(day => Object.entries(day).forEach(([key, lst]) => lst.forEach(x => allEntries.push({ ...x, key }))));
+  return allEntries;
+}
+// keep departures that run on this weekday (bit 0 = Monday); if none do, show the rest rather than nothing
+const runsOn = (x, wd) => x.wd === undefined || (x.wd >> wd & 1);
+const weekdayIn = (tz, d) => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d));
+function running(list, wdOf) {
+  const today = list.filter(x => runsOn(x, wdOf(x)));
+  return today.length ? today : list;
+}
+// "Your clock" mode writes every time the way the viewer's own clock does (7:51 p.m. vs 19:51)
+const viewer12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
+function toMinutes(t) {
+  if (t === "midnight") return 0;
+  if (t === "noon") return 720;
+  const m = t.match(/^(\d+):(\d+)(?: ([ap])\.m\.)?$/);
+  if (!m) return null;
+  return (m[3] ? (+m[1] % 12) + (m[3] === "p" ? 12 : 0) : +m[1]) * 60 + +m[2];
+}
+function viewerTime(min) {
+  const h = Math.floor(min / 60) % 24, m = min % 60;
+  if (!viewer12) return `${pad(h)}:${pad(m)}`;
+  if (h === 0 && m === 0) return "midnight";
+  if (h === 12 && m === 0) return "noon";
+  return `${h % 12 || 12}:${pad(m)} ${h < 12 ? "a.m." : "p.m."}`;
+}
+const inViewerFormat = t => { const m = toMinutes(t); return m === null ? t : viewerTime(m); };
+
+async function clockList(now) {
+  const key = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const data = await hour(now.getHours());
+  if (now.getMinutes() >= 55) hour((now.getHours() + 1) % 24).catch(() => {});
+  const wd = (now.getDay() + 6) % 7;
+  const list = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
+  const shown = viewerTime(now.getHours() * 60 + now.getMinutes());
+  return { list: running(list, () => wd), hint: `Departures timed ${shown} on local clocks around the world.` };
+}
+async function liveList(now) {
+  const all = await everything();
+  const at = d => {
+    const keys = {};
+    const wds = {};
+    return running(all.filter(x => x.tz && x.key === (keys[x.tz] ??= localKey(x.tz, d))), x => (wds[x.tz] ??= weekdayIn(x.tz, d)));
+  };
+  let list = at(now);
+  if (list.length) return { list, hint: `Leaving right now, each on its own local clock.` };
+  for (let k = 1; k <= 20; k++) {
+    list = at(new Date(now.getTime() + k * 60000));
+    if (list.length) return { list, hint: `Nothing leaves this exact minute. These go in ${k} min.` };
+  }
+  return { list: [], hint: "The world's timetables are quiet for a moment." };
+}
+
+/* ------------------------------------------------------------ words */
+function duration(min) {
+  const d = Math.floor(min / 1440), h = Math.floor((min % 1440) / 60), m = min % 60;
+  if (d) return `${d}d ${h}h`;
+  if (h) return m ? `${h}h ${pad(m)}m` : `${h}h`;
+  return `${m} min`;
+}
+function longDuration(min) {
+  if (min >= 1440) {
+    const d = Math.floor(min / 1440), h = Math.round((min % 1440) / 60);
+    return [`${d} day${d > 1 ? "s" : ""}`, h && `${h} hour${h > 1 ? "s" : ""}`].filter(Boolean).join(" and ");
+  }
+  const h = Math.floor(min / 60), m = min % 60;
+  return [h && `${h} hour${h > 1 ? "s" : ""}`, m && `${m} minute${m > 1 ? "s" : ""}`].filter(Boolean).join(" and ");
+}
+const sentence = s => s.replace(/\.\.$/, ".");
+function afterword(x) {
+  const tags = x.tags || [];
+  const kind = x.kind === "metro train" ? "train" : x.kind;
+  if (tags.includes("night")) return `It travels through the night and arrives at ${x.arr}.`;
+  if (tags.includes("last")) return `It is the last ${kind} of the day.`;
+  if (tags.includes("first")) return `It is the first ${kind} of the day.`;
+  if (x.dur >= 1440) {
+    const days = Math.round(x.dur / 1440);
+    return `It will arrive ${days === 1 ? "tomorrow" : `${days} days from now`}, at ${x.arr}.`;
+  }
+  if (x.dur >= 120) return `It reaches ${x.to} at ${x.arr}, ${longDuration(x.dur)} later.`;
+  return `It reaches ${x.to} at ${x.arr}.`;
+}
+const city = tz => (tz || "").split("/").pop().replace(/_/g, " ");
+
+/* split-flap: each character rattles through the board's alphabet, then settles left to right */
+const FLAP = { digit: "0123456789", letter: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" };
+function flap(el, text) {
+  if (reduced()) { el.textContent = text; return; }
+  const chars = [...text];
+  const settle = chars.map((_, i) => 3 + i * 1.2 + Math.random() * 3);
+  let frame = 0;
+  clearInterval(el._flap);
+  el._flap = setInterval(() => {
+    frame++;
+    el.textContent = chars.map((c, i) => {
+      if (frame >= settle[i]) return c;
+      const set = /\d/.test(c) ? FLAP.digit : /\p{L}/u.test(c) ? FLAP.letter : null;
+      return set ? set[Math.floor(Math.random() * set.length)] : c;
+    }).join("");
+    if (frame > Math.max(...settle)) clearInterval(el._flap);
+  }, 38);
+}
+
+/* ------------------------------------------------------------ card */
+let list = [], idx = 0, mode = "clock", shownKey = "";
+
+function render(x) {
+  const native = x.native;
+  $("card").innerHTML = `
+    <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}.
+      <span class="then">${esc(sentence(afterword(x)))}</span></p>
+    <div class="route" aria-hidden="true">
+      <div class="stop"><span class="name" data-flap="${esc(x.from)}"></span>${native ? `<span class="native">${esc(native[0])}</span>` : ""}<span class="clock">DEP ${esc(x.t)}</span></div>
+      <div class="track"><span>${duration(x.dur)}</span></div>
+      <div class="stop"><span class="name" data-flap="${esc(x.to)}"></span>${native ? `<span class="native">${esc(native[1])}</span>` : ""}<span class="clock">ARR ${esc(x.arr)}</span></div>
+    </div>
+    <div class="cite"><b>${esc(x.line)}</b><span>${esc(x.op)}</span><span>${esc(x.place)}</span><span>${esc(city(x.tz))} time</span>${x.old ? `<span>${esc(x.old)} timetable</span>` : ""}</div>`;
+  $("card").querySelectorAll("[data-flap]").forEach(el => flap(el, el.dataset.flap));
+  $("count").textContent = list.length > 1 ? `${idx + 1} / ${list.length}` : "";
+  globe.focus(x, list);
+}
+
+function show(i, fade = true) {
+  if (!list.length) return;
+  idx = (i + list.length) % list.length;
+  if (!fade || reduced()) return render(list[idx]);
+  $("card").classList.add("fading");
+  setTimeout(() => { render(list[idx]); $("card").classList.remove("fading"); }, 380);
+}
+
+async function refresh(force) {
+  const now = new Date();
+  const key = `${mode}|${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  $("now").textContent = viewerTime(now.getHours() * 60 + now.getMinutes());
+  $("today").textContent = now.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  if (key === shownKey && !force) return;
+  shownKey = key;
+  try {
+    const res = await (mode === "live" ? liveList(now) : clockList(now));
+    list = res.list;
+    $("hint").textContent = res.hint;
+    if (!list.length) { $("card").innerHTML = `<p class="status">${esc(res.hint)}</p>`; $("count").textContent = ""; return; }
+    show(0, document.body.dataset.ready === "1");
+    document.body.dataset.ready = "1";
+  } catch (e) {
+    shownKey = "";
+    $("card").innerHTML = `<p class="status">The timetable didn't load. Serve this folder over HTTP (for example <code>python3 -m http.server</code>) and reload.</p>`;
+  }
+}
+function tick() { refresh(); setTimeout(tick, 1000 - (Date.now() % 1000) + 5); }
+
+function setMode(m) {
+  mode = m;
+  $("mode-clock").setAttribute("aria-pressed", m === "clock");
+  $("mode-live").setAttribute("aria-pressed", m === "live");
+  store.set("transit-clock-mode", m);
+  refresh(true);
+}
+
+/* ------------------------------------------------------------ globe: dot-matrix map that flies to each route */
+const globe = (() => {
+  const canvas = $("map"), ctx = canvas.getContext("2d");
+  const base = document.createElement("canvas"), bctx = base.getContext("2d");
+  const mask = document.createElement("canvas"), mctx = mask.getContext("2d", { willReadFrequently: true });
+  const INSET_GRID = 3;                    // px between dots on the corner globe
+  const grid = () => Math.max(3, W / 288); // the big map: ~288 dots across, like a 1.25° grid on the whole world
+  let rings = null, W = 0, H = 0, dpr = 1, colors = {}, monoFont = "monospace";
+  let cam = null, camFrom = null, camTo = null, camT0 = 0, camDur = 1;
+  let current = null, others = [], stops = [], line = [], world = true, t0 = performance.now();
+  let dirty = true, raf = 0, inset = null;
+
+  const rad = d => d * Math.PI / 180, deg = r => r * 180 / Math.PI;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+
+  // local equirectangular projection: shapes stay true near the centre of whatever we're looking at
+  const kx = c => Math.cos(rad(clamp(c.lat, -70, 70)));
+  const project = (c, v, lat, lon) => [v.w / 2 + (lon - c.lon) * c.s * kx(c), v.h / 2 - (lat - c.lat) * c.s];
+  const near = (lon, c) => lon + 360 * Math.round((c.lon - lon) / 360);
+
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["fg", "bg", "muted", "line", "route", "dot", "sign"]) colors[k] = cs.getPropertyValue(`--${k}`).trim();
+    monoFont = cs.getPropertyValue("--mono");
+    dirty = true;
+  }
+
+  function decode(land) {
+    return land.rings.map(flat => {
+      const pts = new Float32Array(flat.length);
+      let x = 0, y = 0, x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+      for (let i = 0; i < flat.length; i += 2) {
+        x += flat[i]; y += flat[i + 1];
+        const lon = x / land.scale, lat = y / land.scale;
+        pts[i] = lon; pts[i + 1] = lat;
+        x0 = Math.min(x0, lon); x1 = Math.max(x1, lon); y0 = Math.min(y0, lat); y1 = Math.max(y1, lat);
+      }
+      return { pts, x0, x1, y0, y1 };
+    });
+  }
+
+  /* cameras */
+  const worldCam = v => { const c = { lat: 14, lon: 12 }; c.s = Math.max(v.w / (360 * kx(c)), v.h / 150); return c; };
+  function fitCam(pts) {
+    let la0 = 90, la1 = -90, lo0 = 1e9, lo1 = -1e9;
+    for (const [lat, lon] of pts) { la0 = Math.min(la0, lat); la1 = Math.max(la1, lat); lo0 = Math.min(lo0, lon); lo1 = Math.max(lo1, lon); }
+    const c = { lat: (la0 + la1) / 2, lon: (lo0 + lo1) / 2 };
+    const v = { w: W, h: H };
+    const fit = Math.min((W * 0.72) / Math.max(1e-3, (lo1 - lo0) * kx(c)), (H * 0.6) / Math.max(1e-3, la1 - la0));
+    c.s = clamp(fit, worldCam(v).s, H / 0.22);   // never closer than ~25 km of sky
+    return c;
+  }
+  function flyTo(target) {
+    if (!cam || reduced()) { cam = target; dirty = true; return; }
+    camFrom = { ...cam, lon: near(cam.lon, target) };
+    camTo = target; camT0 = performance.now();
+    const dist = Math.hypot(camTo.lat - camFrom.lat, (camTo.lon - camFrom.lon) * kx(camTo));
+    camDur = 900 + Math.min(1300, dist * 14);
+  }
+  function stepCam(now) {
+    if (!camTo) return;
+    const k = Math.min(1, (now - camT0) / camDur), e = ease(k);
+    const dist = Math.hypot(camTo.lat - camFrom.lat, (camTo.lon - camFrom.lon) * kx(camTo));
+    const hop = Math.min(2.2, dist / 25) * Math.sin(Math.PI * e);   // pull back mid-flight, like a plane window
+    const ls = Math.log(camFrom.s) + (Math.log(camTo.s) - Math.log(camFrom.s)) * e - hop;
+    cam = {
+      lat: camFrom.lat + (camTo.lat - camFrom.lat) * e,
+      lon: camFrom.lon + (camTo.lon - camFrom.lon) * e,
+      s: Math.max(worldCam({ w: W, h: H }).s, Math.exp(ls)),
+    };
+    if (k >= 1) { cam = camTo; camTo = null; }
+    dirty = true;
+  }
+  /* dots: rasterise land at one pixel per dot, then draw a dot per land pixel */
+  function drawDots(target, c, v, grid, opts = {}) {
+    const cols = Math.ceil(v.w / grid), rows = Math.ceil(v.h / grid);
+    if (mask.width !== cols || mask.height !== rows) { mask.width = cols; mask.height = rows; }
+    mctx.setTransform(1, 0, 0, 1, 0, 0);
+    mctx.clearRect(0, 0, cols, rows);
+    mctx.setTransform(1 / grid, 0, 0, 1 / grid, 0, 0);
+    mctx.fillStyle = "#000";
+    const halfW = v.w / 2 / (c.s * kx(c)), halfH = v.h / 2 / c.s;
+    mctx.beginPath();
+    for (const r of rings) {
+      if (r.y1 < c.lat - halfH || r.y0 > c.lat + halfH) continue;
+      for (const shift of [-360, 0, 360]) {
+        if (r.x1 + shift < c.lon - halfW || r.x0 + shift > c.lon + halfW) continue;
+        const p = r.pts;
+        for (let i = 0; i < p.length; i += 2) {
+          const [x, y] = project(c, v, p[i + 1], p[i] + shift);
+          i ? mctx.lineTo(x, y) : mctx.moveTo(x, y);
+        }
+        mctx.closePath();
+      }
+    }
+    mctx.fill("evenodd");
+    const px = mctx.getImageData(0, 0, cols, rows).data;
+    const r0 = Math.max(0.9, grid * (opts.dot ?? 0.3));
+    target.fillStyle = colors.dot;
+    target.globalAlpha = 0.7;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        if (px[(j * cols + i) * 4 + 3] <= 110) continue;
+        target.beginPath();
+        target.arc((i + 0.5) * grid, (j + 0.5) * grid, r0, 0, 7);
+        target.fill();
+      }
+    }
+    target.globalAlpha = 1;
+  }
+
+  function rebuild() {
+    if (!rings || !W || !cam) return;
+    bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    bctx.clearRect(0, 0, W, H);
+    drawDots(bctx, cam, { w: W, h: H }, grid());
+    dirty = false;
+  }
+
+  /* the route: every stop from where you board to the end of the line */
+  function densify(pts) {
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2));   // smooth glide on long hops
+      for (let k = 1; k <= n; k++) out.push([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]);
+    }
+    return out;
+  }
+  function setRoute(x) {
+    stops = [];
+    if (x.path) for (let i = 0; i < x.path.length; i += 2) stops.push([x.path[i], x.path[i + 1]]);
+    else if (x.ll) stops = [[x.ll[0], x.ll[1]], [x.ll[2], x.ll[3]]];
+    for (let i = 1; i < stops.length; i++) stops[i][1] = near(stops[i][1], { lon: stops[i - 1][1] });   // unwrap the antimeridian
+    line = stops.length > 1 ? densify(stops) : stops;
+  }
+
+  function drawRoute(now) {
+    const v = { w: W, h: H };
+    const pts = line.map(([lat, lon]) => project(cam, v, lat, near(lon, cam)));
+    if (pts.length < 2) return null;
+    const seg = [0];
+    for (let i = 1; i < pts.length; i++) seg.push(seg[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const len = seg[seg.length - 1];
+    const period = 2600 + Math.min(4000, len * 6);   // one trip along the line
+    const cycle = 20000;                              // then rest at the terminus; three trips a minute
+    const p = reduced() ? 1 : ease(Math.min(1, (Math.max(0, now - t0) % cycle) / period));   // rAF's clock can trail t0 by a frame
+    const at = p * len;
+
+    ctx.lineCap = ctx.lineJoin = "round";
+    ctx.strokeStyle = colors.route; ctx.lineWidth = 1.5; ctx.globalAlpha = .4; ctx.setLineDash([2, 5]);
+    ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.lineWidth = 3;
+    ctx.beginPath();
+    let vx = pts[0][0], vy = pts[0][1];
+    for (let i = 0; i < pts.length; i++) {
+      if (seg[i] <= at) { i ? ctx.lineTo(pts[i][0], pts[i][1]) : ctx.moveTo(pts[i][0], pts[i][1]); vx = pts[i][0]; vy = pts[i][1]; continue; }
+      const t = (at - seg[i - 1]) / (seg[i] - seg[i - 1] || 1);
+      vx = pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t; vy = pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t;
+      ctx.lineTo(vx, vy); break;
+    }
+    ctx.stroke();
+
+    // stops, like the dots on a strip map
+    if (len > stops.length * 6) {
+      ctx.lineWidth = 1.2;
+      for (const [lat, lon] of stops.slice(1, -1)) {
+        const [x, y] = project(cam, v, lat, near(lon, cam));
+        ctx.fillStyle = colors.bg; ctx.strokeStyle = colors.fg;
+        ctx.beginPath(); ctx.arc(x, y, 2.4, 0, 7); ctx.fill(); ctx.stroke();
+      }
+    }
+    const [ox, oy] = pts[0], [tx, ty] = pts[pts.length - 1];
+    ctx.lineWidth = 2; ctx.strokeStyle = colors.fg; ctx.fillStyle = colors.bg;
+    ctx.beginPath(); ctx.arc(tx, ty, 4.5, 0, 7); ctx.fill(); ctx.stroke();
+    // the vehicle
+    ctx.fillStyle = colors.bg; ctx.beginPath(); ctx.arc(vx, vy, 6.5, 0, 7); ctx.fill();
+    ctx.fillStyle = colors.route; ctx.beginPath(); ctx.arc(vx, vy, 4.5, 0, 7); ctx.fill();
+    return { ox, oy, tx, ty };
+  }
+
+  function label(text, x, y, align) {
+    ctx.font = `600 11px ${monoFont}`;
+    const w = ctx.measureText(text).width;
+    let lx = align === "left" ? x - 12 - w : x + 12, ly = y + 4;
+    if (lx + w > W - 6) lx = x - 12 - w;
+    if (lx < 6) lx = x + 12;
+    ly = clamp(ly, 14, H - 6);
+    ctx.lineWidth = 5; ctx.strokeStyle = colors.bg; ctx.lineJoin = "round"; ctx.strokeText(text, lx, ly);
+    ctx.fillStyle = colors.fg; ctx.fillText(text, lx, ly);
+  }
+
+  /* the corner globe: the whole world, with a box showing where the big map is looking */
+  function drawInset() {
+    const w = clamp(Math.round(W * 0.2), 110, 190), h = Math.round(w / 2);
+    const x = W - w - 10, y = H - h - 10;
+    inset = { x, y, w, h };
+    if (world) return;
+    const v = { w, h }, c = worldCam(v);
+    ctx.save();
+    ctx.fillStyle = colors.bg; ctx.strokeStyle = colors.line; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 4, y - 4, w + 8, h + 8, 6) : ctx.rect(x - 4, y - 4, w + 8, h + 8); ctx.fill(); ctx.stroke();
+    ctx.translate(x, y);
+    ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+    if (!inset.img || inset.img.w !== w) {
+      const off = document.createElement("canvas"); off.width = w * dpr; off.height = h * dpr;
+      const octx = off.getContext("2d"); octx.scale(dpr, dpr);
+      drawDots(octx, c, v, INSET_GRID, { dot: 0.36 });
+      inset.img = Object.assign(off, { w });
+    }
+    ctx.drawImage(inset.img, 0, 0, w, h);
+    // view box
+    const halfW = W / 2 / (cam.s * kx(cam)), halfH = H / 2 / cam.s;
+    const [ax, ay] = project(c, v, cam.lat + halfH, near(cam.lon, c) - halfW);
+    const [bx, by] = project(c, v, cam.lat - halfH, near(cam.lon, c) + halfW);
+    ctx.strokeStyle = colors.fg; ctx.lineWidth = 1;
+    ctx.strokeRect(ax, ay, Math.max(3, bx - ax), Math.max(3, by - ay));
+    for (const o of others) {
+      if (!o.ll) continue;
+      const [px, py] = project(c, v, o.ll[0], near(o.ll[1], c));
+      ctx.fillStyle = o === current ? colors.route : colors.fg;
+      ctx.globalAlpha = o === current ? 1 : .6;
+      ctx.beginPath(); ctx.arc(px, py, o === current ? 3 : 1.6, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function frame(now) {
+    raf = 0;
+    if (!rings || !W || !cam) return;
+    stepCam(now);
+    if (dirty) rebuild();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(base, 0, 0, W, H);
+
+    const v = { w: W, h: H };
+    ctx.strokeStyle = colors.fg; ctx.lineWidth = 1.2;
+    for (const o of others) {
+      if (o === current || !o.ll) continue;
+      const [x, y] = project(cam, v, o.ll[0], near(o.ll[1], cam));
+      if (x < -10 || x > W + 10 || y < -10 || y > H + 10) continue;
+      ctx.globalAlpha = .6; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    const ends = current ? drawRoute(now) : null;
+    if (ends) {
+      ctx.fillStyle = colors.route; ctx.beginPath(); ctx.arc(ends.ox, ends.oy, 5, 0, 7); ctx.fill();
+      const apart = Math.hypot(ends.tx - ends.ox, ends.ty - ends.oy) > 90;
+      const leftward = ends.tx < ends.ox;
+      label(current.from.toUpperCase(), ends.ox, ends.oy, leftward ? "right" : "left");
+      if (apart && !world) label(current.to.toUpperCase(), ends.tx, ends.ty, leftward ? "left" : "right");
+    }
+    drawInset();
+    if (!document.hidden && (!reduced() || camTo || dirty)) raf = requestAnimationFrame(frame);
+  }
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  function target() {
+    if (world || stops.length === 0) return worldCam({ w: W, h: H });
+    return fitCam(stops);
+  }
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    dpr = Math.min(2, devicePixelRatio || 1);
+    W = r.width; H = r.height;
+    for (const c of [canvas, base]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    cam = target(); camTo = null; dirty = true;
+    if (inset) inset.img = null;
+    kick();
+  }
+
+  function hitOther(x, y) {
+    let best = -1, bd = 16;
+    list.forEach((o, i) => {
+      if (!o.ll) return;
+      const [px, py] = project(cam, { w: W, h: H }, o.ll[0], near(o.ll[1], cam));
+      const d = Math.hypot(px - x, py - y);
+      if (d < bd) { bd = d; best = i; }
+    });
+    return best;
+  }
+  const inInset = (x, y) => inset && !world && x >= inset.x - 4 && x <= inset.x + inset.w + 4 && y >= inset.y - 4 && y <= inset.y + inset.h + 4;
+  // the whole world is the default; zooming in is the viewer's choice and sticks until they zoom back out
+  function setWorld(on) {
+    world = on;
+    $("zoom").textContent = world ? "Zoom in" : "Zoom out";
+    $("zoom").setAttribute("aria-pressed", String(!world));
+    $("maphint").textContent = world ? "Tap a ring to jump to that departure." : "Tap the little globe to zoom back out.";
+    flyTo(target()); kick();
+  }
+
+  $("zoom").addEventListener("click", () => setWorld(!world));
+  canvas.addEventListener("click", e => {
+    const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    if (inInset(x, y)) return setWorld(true);
+    const hit = hitOther(x, y);
+    if (hit >= 0 && hit !== idx) show(hit);
+  });
+  canvas.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === "z") { e.stopPropagation(); setWorld(!world); } });
+  canvas.addEventListener("mousemove", e => {
+    const r = canvas.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    canvas.style.cursor = inInset(x, y) || hitOther(x, y) >= 0 ? "pointer" : "default";
+  });
+
+  readColors();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { readColors(); if (inset) inset.img = null; kick(); });
+  new MutationObserver(() => { readColors(); if (inset) inset.img = null; kick(); }).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  new ResizeObserver(resize).observe(canvas);
+  document.addEventListener("visibilitychange", kick);
+  load("land").then(l => { rings = decode(l); resize(); }).catch(() => { $("mapwrap").hidden = true; });
+
+  return {
+    focus(x, all) {
+      current = x; others = all; t0 = performance.now();
+      setRoute(x);
+      if (W) flyTo(target());
+      kick();
+    },
+  };
+})();
+
+/* ------------------------------------------------------------ the date card: today on the timetables */
+function dayOfYear(d) {
+  const start = new Date(d.getFullYear(), 0, 1);
+  return Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - start) / 864e5) + 1;
+}
+function isoWeek(d) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
+}
+const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const leg = x => `<span class="tm">${esc(x.t)}</span> ${esc(x.v)} from ${esc(x.from)} to ${esc(x.to)} <span class="pl">· ${esc(x.place)}</span>`;
+function noteText(n, weekday) {
+  if (n.kind === "none") return `No service in ${n.place} today.`;
+  return `${n.place} is running ${n.pct}% ${n.kind} trips than a usual ${weekday}.`;
+}
+async function toggleFact(open) {
+  const card = $("fact"), btn = $("today");
+  open ??= card.hidden;
+  if (!open) { card.hidden = true; btn.setAttribute("aria-expanded", "false"); return; }
+  const now = new Date();
+  const weekday = now.toLocaleDateString(undefined, { weekday: "long" });
+  const title = now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+  const year = new Date(now.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365;
+  const foot = `<div class="foot">Day ${dayOfYear(now)} of ${year} · Week ${isoWeek(now)}</div>`;
+  let body;
+  try {
+    const d = (await load("days"))[isoDate(now)];
+    body = !d ? `<p class="note">These timetables don't reach this date yet. Rebuilding the data will add it.</p>` : `
+      <p class="headline">${d.trips.toLocaleString()} trips on ${d.networks} networks.</p>
+      <dl>
+        ${d.first ? `<dt>First</dt><dd>${leg(d.first)}</dd>` : ""}
+        ${d.last ? `<dt>Last</dt><dd>${leg(d.last)}</dd>` : ""}
+      </dl>
+      ${d.notes.map(n => `<p class="note">${esc(noteText(n, weekday))}</p>`).join("")}`;
+  } catch {
+    body = `<p class="note">Today's numbers didn't load. Reload the page to try again.</p>`;
+  }
+  card.innerHTML = `<span class="eyebrow">${esc(title)} on the timetables</span>${body}${foot}`;
+  card.hidden = false; btn.setAttribute("aria-expanded", "true");
+}
+$("today").addEventListener("click", e => { e.stopPropagation(); toggleFact(); });
+document.addEventListener("click", e => { if (!$("fact").hidden && !e.target.closest("#fact")) toggleFact(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("fact").hidden) { toggleFact(false); $("today").focus(); } });
+
+/* ------------------------------------------------------------ wiring */
+$("next").addEventListener("click", () => show(idx + 1));
+$("mode-clock").addEventListener("click", () => setMode("clock"));
+$("mode-live").addEventListener("click", () => setMode("live"));
+document.addEventListener("keydown", e => {
+  if (e.target.closest("button")) return;
+  if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); show(idx + 1); }
+  if (e.key === "ArrowLeft") show(idx - 1);
+});
+if (location.hash === "#widget") document.body.classList.add("widget");
+addEventListener("hashchange", () => {
+  document.body.classList.toggle("widget", location.hash === "#widget");
+  if (location.hash === "#live" || location.hash === "#clock") setMode(location.hash.slice(1));
+});
+mode = location.hash === "#live" ? "live" : store.get("transit-clock-mode") === "live" ? "live" : "clock";
+$("mode-clock").setAttribute("aria-pressed", mode === "clock");
+$("mode-live").setAttribute("aria-pressed", mode === "live");
+tick();
+</script>
+
+</body></html>
