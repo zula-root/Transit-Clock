@@ -470,25 +470,30 @@ async function clockList(now) {
   if (now.getMinutes() >= 55) hour((now.getHours() + 1) % 24).catch(() => {});
   const wd = (now.getDay() + 6) % 7;
   const all = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
-  const shown = viewerTime(now.getHours() * 60 + now.getMinutes());
-  // The chosen region comes first. Where these timetables have nothing leaving from it at this
-  // minute, the clock does not go blank or skip ahead: it says so, and shows the minute from elsewhere.
-  const local = region ? all.filter(x => regionOf(x) === region) : all;
-  const hint = `A real departure, timetabled for ${shown} on a station clock somewhere in ${region ? REGIONS[region] : "the world"}.`;
-  if (pinned) {
-    /* A pinned minute is a link to one train, so it must read the same on any day it is opened.
-       The live clock leaves out trains that do not run today and turns its opening choice with
-       the date. A pinned one does neither. If the link names a train, that train opens the
-       minute, until the reader turns the region and asks for something else. */
-    const still = new Date(2000, 0, 1, now.getHours(), now.getMinutes());
-    const i = picked ? all.findIndex(x => `${x.v} ${x.from} ${x.to}`.toLowerCase().includes(picked)) : -1;
-    if (i >= 0) return { list: [all[i], ...lead(all.filter((_, j) => j !== i), still)], hint };
-    if (region && !local.length) return { list: lead(all, still), elsewhere: true, hint: `These timetables have no ${shown} in ${REGIONS[region]}. This one is from elsewhere.` };
-    return { list: lead(local, still), hint };
-  }
-  if (region && !local.length) return { list: lead(running(all, () => wd), now), elsewhere: true, hint: `These timetables have no ${shown} in ${REGIONS[region]}. This one is from elsewhere.` };
-  return { list: lead(running(local, () => wd), now), hint };
+  /* The chosen region comes first, and the rest of the world follows it.
+     "Another 10:30" steps through the region's departures and then carries on into everyone
+     else's, so the button always has somewhere to go. It used to stop at the region's edge,
+     and in most minutes a region has exactly one departure, so pressing it did nothing.
+     A departure from outside the chosen region is marked `away`, and the line above the
+     sentence says where it is from. A region with nothing at this minute works the same way:
+     the clock does not go blank or skip ahead, it shows the minute from elsewhere and says so. */
+  const home = region ? all.filter(x => regionOf(x) === region) : all;
+  const away = region ? all.filter(x => regionOf(x) !== region).map(x => ({ ...x, away: true })) : [];
+  /* A pinned minute is a link to one train, so it must read the same on any day it is opened.
+     The live clock leaves out trains that do not run today and turns its opening choice with
+     the date. A pinned one does neither. */
+  const date = pinned ? new Date(2000, 0, 1, now.getHours(), now.getMinutes()) : now;
+  const order = xs => lead(pinned ? xs : running(xs, () => wd), date);
+  let list = [...order(home), ...order(away)];
+  // If the link names a train, that train opens the minute, until the reader turns the region
+  // and asks for something else. It is shown as itself, not as a visitor from another region.
+  const i = picked ? list.findIndex(x => `${x.v} ${x.from} ${x.to}`.toLowerCase().includes(picked)) : -1;
+  if (i >= 0) list = [{ ...list[i], away: false }, ...list.slice(0, i), ...list.slice(i + 1)];
+  return { list, homeCount: home.length };
 }
+// The line at the foot of the page says where this departure's clock is.
+const hintFor = x => `A real departure, timetabled for ${x.t} on a station clock ${
+  x.away ? `in ${fromPlace(x.place)}` : `somewhere in ${region ? REGIONS[region] : "the world"}`}.`;
 
 /* ------------------------------------------------------------ words */
 function duration(min) {
@@ -523,6 +528,7 @@ const city = tz => (tz || "").split("/").pop().replace(/_/g, " ");
 // "the 4:12", the way a person names the train they mean to catch ("the noon one" at noon)
 const short = t => t.replace(/ [ap]\.m\.$/, "");
 const theOne = t => /^\d/.test(t) ? `the ${short(t)}` : `the ${t} one`;
+const what = t => /^\d/.test(t) ? short(t) : `${t} departure`;   // "no other 10:30", "no other noon departure"
 const fromPlace = p => /^(United|Netherlands)/.test(p) ? `the ${p}` : p;   // "from the United States"
 
 /* split-flap: each character rattles through the board's alphabet, then settles left to right */
@@ -545,7 +551,7 @@ function flap(el, text) {
 }
 
 /* ------------------------------------------------------------ card */
-let list = [], idx = 0, shownKey = "", elsewhere = false;
+let list = [], idx = 0, shownKey = "", homeCount = 0;
 
 /* A fixed minute, for sharing
    index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
@@ -567,8 +573,10 @@ function clockNow() {
 function render(x) {
   const native = x.native;
   $("card").innerHTML = `
-    <p class="kicker">${elsewhere
-      ? `These timetables have no ${esc(short(x.t))} in ${esc(REGIONS[region])}. <b>This one is from ${esc(fromPlace(x.place))}.</b>`
+    <p class="kicker">${x.away
+      ? `${homeCount
+          ? `${esc(REGIONS[region])} has no other ${esc(what(x.t))}.`
+          : `These timetables have no ${esc(what(x.t))} in ${esc(REGIONS[region])}.`} <b>This one is from ${esc(fromPlace(x.place))}.</b>`
       : `Every minute is somebody’s train. <b>This is ${esc(theOne(x.t))}.</b>`}</p>
     <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}${x.to.endsWith(".") ? "" : "."}
       <span class="then">${esc(sentence(afterword(x)))}</span></p>
@@ -580,6 +588,7 @@ function render(x) {
     <div class="cite"><b>${esc(x.line)}</b><span>${esc(x.op)}</span><span>${esc(x.place)}</span><span>${esc(city(x.tz))} time</span>${x.old ? `<span>${esc(x.old)} timetable</span>` : ""}</div>`;
   $("card").querySelectorAll("[data-flap]").forEach(el => flap(el, el.dataset.flap));
   $("count").textContent = list.length > 1 ? `${idx + 1} / ${list.length}` : "";
+  $("hint").textContent = hintFor(x);
   // The button says what tapping it gives you: another train with this same time on its board.
   $("next").textContent = /^\d/.test(x.t) ? `Another ${short(x.t)}` : "Another departure";
   fit();
@@ -603,9 +612,8 @@ async function refresh(force) {
   shownKey = key;
   try {
     const res = await clockList(now);
-    list = res.list; elsewhere = !!res.elsewhere;
-    $("hint").textContent = res.hint;
-    if (!list.length) { $("card").innerHTML = `<p class="status">${esc(res.hint)}</p>`; $("count").textContent = ""; return; }
+    list = res.list; homeCount = res.homeCount;
+    if (!list.length) { $("card").innerHTML = `<p class="status">These timetables have nothing leaving at this minute.</p>`; $("count").textContent = ""; $("hint").textContent = ""; return; }
     show(0, document.body.dataset.ready === "1");
     document.body.dataset.ready = "1";
   } catch (e) {

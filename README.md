@@ -44,8 +44,9 @@ people name a train they mean to catch. This clock takes that literally.
   America, Europe & Africa or Asia-Pacific. Where the timetables have nothing
   leaving from that region at this minute, the clock says so and shows one
   from elsewhere.
-- **Another 4:12** steps through the other departures that share the minute.
-  The space bar and the arrow keys do the same.
+- **Another 4:12** steps through the other departures that share the minute:
+  the chosen region's first, then the rest of the world's. The space bar and
+  the arrow keys do the same.
 - The date in the corner opens a card with the day's first and last
   departures.
 
