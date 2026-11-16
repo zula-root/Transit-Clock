@@ -212,7 +212,7 @@ body.widget .cite b { color: var(--bg); }
     <p class="body">Each minute it shows a real train, ferry or bus that is timetabled to leave at exactly that minute, somewhere in the world. There is one for all 1,440 minutes of the day.</p>
     <p class="body"><b>Your time</b> matches the minute on your clock to a station clock anywhere. <b>Leaving now</b> shows what is pulling out at this instant.</p>
     <p class="note">The idea is borrowed from the <a href="https://literature-clock.jenevoldsen.com/" target="_blank" rel="noopener">literary clock</a>, which tells the time with sentences from novels. Timetables turn out to be full of sentences too.</p>
-    <div class="foot">Times come from the operators’ published timetables.</div>
+    <div class="foot">Times come from the operators’ published timetables. Left open on a stand, the page keeps the screen awake.</div>
   </div>
 </header>
 
@@ -420,6 +420,20 @@ function flap(el, text) {
 /* ------------------------------------------------------------ card */
 let list = [], idx = 0, mode = "clock", shownKey = "";
 
+/* A fixed minute, for sharing
+   index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
+   there, so a link can point at one particular train. Without ?at the clock
+   follows the real time. */
+const pinned = (() => {
+  const m = (new URLSearchParams(location.search).get("at") || "").match(/^(\d{1,2}):?(\d{2})$/);
+  return m && +m[1] < 24 && +m[2] < 60 ? [+m[1], +m[2]] : null;
+})();
+function clockNow() {
+  const d = new Date();
+  if (pinned) d.setHours(pinned[0], pinned[1], 0, 0);
+  return d;
+}
+
 function render(x) {
   const native = x.native;
   $("card").innerHTML = `
@@ -448,7 +462,7 @@ function show(i, fade = true) {
 }
 
 async function refresh(force) {
-  const now = new Date();
+  const now = clockNow();
   const key = `${mode}|${pad(now.getHours())}:${pad(now.getMinutes())}`;
   $("now").textContent = viewerTime(now.getHours() * 60 + now.getMinutes());
   $("today").textContent = now.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
@@ -877,6 +891,20 @@ addEventListener("hashchange", () => {
 mode = location.hash === "#live" ? "live" : store.get("transit-clock-mode") === "live" ? "live" : "clock";
 $("mode-clock").setAttribute("aria-pressed", mode === "clock");
 $("mode-live").setAttribute("aria-pressed", mode === "live");
+
+/* Stay awake
+   Left open on a phone or tablet stand, this is a desk clock, and a desk clock
+   should not go dark after thirty seconds. Where the browser allows it, the
+   page asks to keep the screen on for as long as it is the thing being looked
+   at. The lock is released by the browser whenever the page is hidden, so it
+   is asked for again each time the page comes back. */
+async function stayAwake() {
+  if (!("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+  try { await navigator.wakeLock.request("screen"); } catch {}   // refused on low battery; the clock still works
+}
+document.addEventListener("visibilitychange", stayAwake);
+stayAwake();
+
 tick();
 </script>
 
