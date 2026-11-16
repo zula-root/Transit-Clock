@@ -41,9 +41,9 @@ people name a train they mean to catch. This clock takes that literally.
 - **The time never changes.** It is always the time on your own clock, read
   off a station clock somewhere else. The chevrons at the top turn through
   the parts of the world that station can be in: North America, Latin
-  America, Europe & Africa or Asia-Pacific. Where the timetables have nothing
-  leaving from that region at this minute, the clock says so and shows one
-  from elsewhere.
+  America, Europe & Africa or Asia-Pacific. A region with nothing leaving at
+  this minute is passed over. If it is the one you chose, the clock shows the
+  whole world for that minute and goes back to your region at the next.
 - **Another 4:12** steps through the other departures that share the minute:
   the chosen region's first, then the rest of the world's. The space bar and
   the arrow keys do the same.

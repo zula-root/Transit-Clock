@@ -460,7 +460,14 @@ function regionOf(x) {
   if (tz.startsWith("America/")) return LATIN.test(tz) ? "la" : "na";
   return "";
 }
-let region = "";   // "" is the whole world
+let region = "";   // the part of the world the reader chose; "" is all of it
+/* A region with nothing leaving at this minute is not offered.
+   The chevrons pass over it. If it is the region the reader chose, the clock shows the whole
+   world for that minute and returns to the region when it has a departure again. The first
+   version kept the region's name up and showed a train from somewhere else under it, with a
+   line to explain. Readers took that for a fault: North America chosen, and a train in Poland. */
+let showing = "";         // what is on screen this minute: the choice, or "" when the choice has nothing
+let open = new Set();     // the regions with a departure at this minute
 const REGION_ORDER = ["", "na", "la", "eu", "ap"];   // the order the chevrons turn through
 const regionName = r => r ? REGIONS[r] : "The world";
 
@@ -475,10 +482,11 @@ async function clockList(now) {
      else's, so the button always has somewhere to go. It used to stop at the region's edge,
      and in most minutes a region has exactly one departure, so pressing it did nothing.
      A departure from outside the chosen region is marked `away`, and the line above the
-     sentence says where it is from. A region with nothing at this minute works the same way:
-     the clock does not go blank or skip ahead, it shows the minute from elsewhere and says so. */
-  const home = region ? all.filter(x => regionOf(x) === region) : all;
-  const away = region ? all.filter(x => regionOf(x) !== region).map(x => ({ ...x, away: true })) : [];
+     sentence says where it is from. */
+  open = new Set(all.map(regionOf));
+  showing = open.has(region) ? region : "";
+  const home = showing ? all.filter(x => regionOf(x) === showing) : all;
+  const away = showing ? all.filter(x => regionOf(x) !== showing).map(x => ({ ...x, away: true })) : [];
   /* A pinned minute is a link to one train, so it must read the same on any day it is opened.
      The live clock leaves out trains that do not run today and turns its opening choice with
      the date. A pinned one does neither. */
@@ -489,11 +497,11 @@ async function clockList(now) {
   // and asks for something else. It is shown as itself, not as a visitor from another region.
   const i = picked ? list.findIndex(x => `${x.v} ${x.from} ${x.to}`.toLowerCase().includes(picked)) : -1;
   if (i >= 0) list = [{ ...list[i], away: false }, ...list.slice(0, i), ...list.slice(i + 1)];
-  return { list, homeCount: home.length };
+  return { list };
 }
 // The line at the foot of the page says where this departure's clock is.
 const hintFor = x => `A real departure, timetabled for ${x.t} on a station clock ${
-  x.away ? `in ${fromPlace(x.place)}` : `somewhere in ${region ? REGIONS[region] : "the world"}`}.`;
+  x.away ? `in ${fromPlace(x.place)}` : `somewhere in ${showing ? REGIONS[showing] : "the world"}`}.`;
 
 /* ------------------------------------------------------------ words */
 function duration(min) {
@@ -551,7 +559,7 @@ function flap(el, text) {
 }
 
 /* ------------------------------------------------------------ card */
-let list = [], idx = 0, shownKey = "", homeCount = 0;
+let list = [], idx = 0, shownKey = "";
 
 /* A fixed minute, for sharing
    index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
@@ -574,9 +582,7 @@ function render(x) {
   const native = x.native;
   $("card").innerHTML = `
     <p class="kicker">${x.away
-      ? `${homeCount
-          ? `${esc(REGIONS[region])} has no other ${esc(what(x.t))}.`
-          : `These timetables have no ${esc(what(x.t))} in ${esc(REGIONS[region])}.`} <b>This one is from ${esc(fromPlace(x.place))}.</b>`
+      ? `${esc(REGIONS[showing])} has no other ${esc(what(x.t))}. <b>This one is from ${esc(fromPlace(x.place))}.</b>`
       : `Every minute is somebody’s train. <b>This is ${esc(theOne(x.t))}.</b>`}</p>
     <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}${x.to.endsWith(".") ? "" : "."}
       <span class="then">${esc(sentence(afterword(x)))}</span></p>
@@ -612,7 +618,8 @@ async function refresh(force) {
   shownKey = key;
   try {
     const res = await clockList(now);
-    list = res.list; homeCount = res.homeCount;
+    list = res.list;
+    drawRegion();   // the name follows what is on screen, which is the world when the chosen region has nothing
     if (!list.length) { $("card").innerHTML = `<p class="status">These timetables have nothing leaving at this minute.</p>`; $("count").textContent = ""; $("hint").textContent = ""; return; }
     show(0, document.body.dataset.ready === "1");
     document.body.dataset.ready = "1";
@@ -662,20 +669,27 @@ function drawRegion(dir = 0) {
   const names = $("region-names");
   if (!names.children.length) names.innerHTML = REGION_ORDER.map(r => `<span data-r="${r}">${esc(regionName(r))}</span>`).join("");
   for (const el of names.children) {
-    const on = el.dataset.r === region;
+    const on = el.dataset.r === showing;
+    if (on === el.classList.contains("on") && !dir) continue;   // nothing to change, and nothing to slide
     el.className = on ? `on${dir > 0 ? " from-right" : dir < 0 ? " from-left" : ""}` : "";
     el.setAttribute("aria-hidden", String(!on));
   }
-  if (dir) $("region-said").textContent = regionName(region);   // read out to a screen reader when it changes
+  if (dir) $("region-said").textContent = regionName(showing);   // read out to a screen reader when it changes
 }
 function setRegion(r, dir = 0) {
-  region = REGIONS[r] ? r : "";
+  region = showing = REGIONS[r] ? r : "";
   if (dir) picked = "";   // a train named in the link gives way once the reader chooses a region
   drawRegion(dir);
   store.set("transit-clock-region", region);
   refresh(true);
 }
-const stepRegion = dir => setRegion(REGION_ORDER[(REGION_ORDER.indexOf(region) + dir + REGION_ORDER.length) % REGION_ORDER.length], dir);
+// The chevrons turn from the name on show to the next region that has something leaving now.
+function stepRegion(dir) {
+  let i = REGION_ORDER.indexOf(showing);
+  do i = (i + dir + REGION_ORDER.length) % REGION_ORDER.length;
+  while (REGION_ORDER[i] && !open.has(REGION_ORDER[i]));
+  setRegion(REGION_ORDER[i], dir);
+}
 
 /* ------------------------------------------------------------ globe: dot-matrix map that flies to each route */
 const globe = (() => {
@@ -1168,7 +1182,6 @@ if (location.hash === "#widget") document.body.classList.add("widget");
 addEventListener("hashchange", () => document.body.classList.toggle("widget", location.hash === "#widget"));
 // ?region=eu opens on one part of the world. Otherwise the last choice is remembered.
 region = (r => REGIONS[r] ? r : "")(new URLSearchParams(location.search).get("region") ?? store.get("transit-clock-region") ?? "");
-drawRegion();
 
 /* Stay awake
    Left open on a phone or tablet stand, this is a desk clock, and a desk clock
