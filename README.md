@@ -15,7 +15,7 @@ that is timetabled to leave at exactly that minute, somewhere in the world.
 
 *The clock's stand face on a folded iPhone Duo. A rendering, not a photograph.*
 
-Every minute is somebody's train. There are 9,989 departures in the data, and
+Every minute is somebody's train. There are 9,995 departures in the data, and
 all 1,440 minutes of the day have at least six.
 
 ## Where the idea comes from
@@ -132,6 +132,10 @@ There is no build step and nothing to install.
 - The idea: the Guardian's readers, Jaap Meijers and Johannes Enevoldsen.
 - Times: the operators' published timetables. Each departure names its
   operator on the page.
+- Tokyo: six bullet trains were added by hand, because the timetables the
+  clock was built from had none. Their times are from the JR Timetable for
+  November 2026, as shown on JR East's timetable site. The card behind the
+  date counts the original timetables only.
 - Type: Newsreader, Overpass and Overpass Mono.
 - A sibling: the [Docket Clock](https://github.com/zula-root/Docket-Clock),
   which tells the time with sentences from court opinions.
