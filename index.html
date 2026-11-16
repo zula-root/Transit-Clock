@@ -974,9 +974,20 @@ const globe = (() => {
   }
   const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
 
+  /* The whole world does not fit across a phone, and not quite across a wide screen either. So the
+     world view turns, only as far as it must, to keep this departure and its route in sight. */
   function target() {
-    if (world || stops.length === 0) return worldCam({ w: W, h: H });
-    return fitCam(stops);
+    if (!world && stops.length) return fitCam(stops);
+    const v = { w: W, h: H }, c = worldCam(v);
+    if (!stops.length) return c;
+    const reach = v.w / 2 / (c.s * kx(c)) * .84;   // degrees of longitude either side of the middle, less a margin
+    const turn = near(stops[0][1], c) - stops[0][1];
+    let west = 1e9, east = -1e9;
+    for (const [, lon] of stops) { west = Math.min(west, lon + turn); east = Math.max(east, lon + turn); }
+    if (east - west > 2 * reach) west = east = stops[0][1] + turn;   // too long a route to show whole: keep where it leaves from
+    if (east > c.lon + reach) c.lon = east - reach;
+    else if (west < c.lon - reach) c.lon = west + reach;
+    return c;
   }
 
   function resize() {
