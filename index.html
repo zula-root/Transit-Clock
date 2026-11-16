@@ -76,6 +76,11 @@ header .today:hover, header .today[aria-expanded="true"] { opacity: 1; color: va
 .fact-card .note { margin: 0; font-family: var(--serif); font-size: 14px; font-style: italic; color: var(--muted); }
 .fact-card .foot { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
 header .right { display: flex; align-items: center; gap: 16px; }
+/* About: the same card as the date facts, set as a few short paragraphs */
+.fact-card p.body { margin: 0; font-family: var(--serif); font-size: 15px; line-height: 1.4; }
+.fact-card p.body b { font-family: var(--sans); font-weight: 700; font-size: .88em; }
+.fact-card a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+.fact-card a:hover { text-decoration-style: solid; }
 
 .modes { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
 .modes button {
@@ -101,6 +106,13 @@ main.fading { opacity: 0; }
   font-size: clamp(1.7rem, 4.6vw, 3.1rem); line-height: 1.22; letter-spacing: -.01em;
   text-wrap: pretty;
 }
+/* The line above the sentence
+   A newcomer needs two things before the sentence can land: that this is a
+   clock, and that the train is real. The motto carries the first. "This is
+   the 4:12" carries the second, and tells the time the way people name a
+   train they mean to catch. */
+.kicker { margin: 0 0 -18px; font-size: 12px; line-height: 1.5; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.kicker b { color: var(--fg); font-weight: 600; white-space: nowrap; }
 .quote .then { display: block; margin-top: .5em; font-size: .62em; line-height: 1.4; color: var(--muted); font-style: italic; }
 .time {
   font-family: var(--sans); font-weight: 800; font-size: .78em; letter-spacing: 0;
@@ -162,7 +174,7 @@ footer .controls { display: flex; gap: 12px; align-items: center; }
 
 /* #widget: the phone home-screen size, for previewing the eventual widget */
 body.widget { justify-content: center; align-items: center; }
-body.widget header, body.widget footer, body.widget .route, body.widget .then, body.widget .map { display: none; }
+body.widget header, body.widget footer, body.widget .route, body.widget .then, body.widget .map, body.widget .kicker { display: none; }
 body.widget main {
   width: min(340px, 100%); aspect-ratio: 1; max-width: 100%; justify-content: space-between; gap: 12px;
   padding: 20px; border-radius: 22px; background: var(--fg); color: var(--bg);
@@ -185,12 +197,23 @@ body.widget .cite b { color: var(--bg); }
   <span class="brand">Transit Clock</span>
   <span class="right">
     <span class="modes" role="group" aria-label="What to show">
-      <button type="button" id="mode-clock" aria-pressed="true">Your clock</button>
-      <button type="button" id="mode-live" aria-pressed="false"><span class="live-dot"></span>Live</button>
+      <!-- The two modes used to be "Your clock" and "Live", which left it unclear whether the
+           train on screen was leaving now. The labels now say what each one shows. -->
+      <button type="button" id="mode-clock" aria-pressed="true" title="Departures timed to the minute on your clock, anywhere in the world">Your time</button>
+      <button type="button" id="mode-live" aria-pressed="false" title="Departures pulling out at this instant"><span class="live-dot"></span>Leaving now</button>
     </span>
+    <button type="button" class="today" id="about-btn" aria-expanded="false" aria-controls="about">About</button>
     <span class="now-wrap"><button type="button" class="today" id="today" aria-expanded="false" aria-controls="fact"></button><span class="sep" aria-hidden="true"> · </span><span class="now" id="now">--:--</span></span>
   </span>
   <div class="fact-card" id="fact" role="dialog" aria-label="Today on the timetables" hidden></div>
+  <div class="fact-card" id="about" role="dialog" aria-label="About this clock" hidden>
+    <span class="eyebrow">About this clock</span>
+    <p class="headline">A clock made of timetables.</p>
+    <p class="body">Each minute it shows a real train, ferry or bus that is timetabled to leave at exactly that minute, somewhere in the world. There is one for all 1,440 minutes of the day.</p>
+    <p class="body"><b>Your time</b> matches the minute on your clock to a station clock anywhere. <b>Leaving now</b> shows what is pulling out at this instant.</p>
+    <p class="note">The idea is borrowed from the <a href="https://literature-clock.jenevoldsen.com/" target="_blank" rel="noopener">literary clock</a>, which tells the time with sentences from novels. Timetables turn out to be full of sentences too.</p>
+    <div class="foot">Times come from the operators’ published timetables.</div>
+  </div>
 </header>
 
 <main id="card" aria-live="polite">
@@ -298,7 +321,7 @@ function lead(list, date) {
   const turn = (dayOfYear(date) + date.getHours() * 60 + date.getMinutes()) % top;
   return [...sorted.slice(turn, top), ...sorted.slice(0, turn), ...sorted.slice(top)];
 }
-// "Your clock" mode writes every time the way the viewer's own clock does (7:51 p.m. vs 19:51)
+// "Your time" mode writes every time the way the viewer's own clock does (7:51 p.m. vs 19:51)
 const viewer12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
 function toMinutes(t) {
   if (t === "midnight") return 0;
@@ -323,7 +346,7 @@ async function clockList(now) {
   const wd = (now.getDay() + 6) % 7;
   const list = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
   const shown = viewerTime(now.getHours() * 60 + now.getMinutes());
-  return { list: lead(running(list, () => wd), now), hint: `Departures timed ${shown} on local clocks around the world.` };
+  return { list: lead(running(list, () => wd), now), hint: `A real departure, timetabled for ${shown} on a station clock somewhere in the world.` };
 }
 async function liveList(now) {
   const all = await everything();
@@ -371,6 +394,9 @@ function afterword(x) {
   return `It reaches ${x.to} at ${x.arr}.`;
 }
 const city = tz => (tz || "").split("/").pop().replace(/_/g, " ");
+// "the 4:12", the way a person names the train they mean to catch ("the noon one" at noon)
+const short = t => t.replace(/ [ap]\.m\.$/, "");
+const theOne = t => /^\d/.test(t) ? `the ${short(t)}` : `the ${t} one`;
 
 /* split-flap: each character rattles through the board's alphabet, then settles left to right */
 const FLAP = { digit: "0123456789", letter: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" };
@@ -397,6 +423,7 @@ let list = [], idx = 0, mode = "clock", shownKey = "";
 function render(x) {
   const native = x.native;
   $("card").innerHTML = `
+    <p class="kicker">Every minute is somebody’s train. <b>${mode === "live" ? "This one is leaving now." : `This is ${esc(theOne(x.t))}.`}</b></p>
     <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}.
       <span class="then">${esc(sentence(afterword(x)))}</span></p>
     <div class="route" aria-hidden="true">
@@ -407,6 +434,8 @@ function render(x) {
     <div class="cite"><b>${esc(x.line)}</b><span>${esc(x.op)}</span><span>${esc(x.place)}</span><span>${esc(city(x.tz))} time</span>${x.old ? `<span>${esc(x.old)} timetable</span>` : ""}</div>`;
   $("card").querySelectorAll("[data-flap]").forEach(el => flap(el, el.dataset.flap));
   $("count").textContent = list.length > 1 ? `${idx + 1} / ${list.length}` : "";
+  // The button says what tapping it gives you: another train with this same time on its board.
+  $("next").textContent = mode === "clock" && /^\d/.test(x.t) ? `Another ${short(x.t)}` : "Another departure";
   globe.focus(x, list);
 }
 
@@ -793,6 +822,7 @@ function noteText(n, weekday) {
 async function toggleFact(open) {
   const card = $("fact"), btn = $("today");
   open ??= card.hidden;
+  if (open) toggleAbout(false);
   if (!open) { card.hidden = true; btn.setAttribute("aria-expanded", "false"); return; }
   const now = new Date();
   const weekday = now.toLocaleDateString(undefined, { weekday: "long" });
@@ -818,6 +848,17 @@ async function toggleFact(open) {
 $("today").addEventListener("click", e => { e.stopPropagation(); toggleFact(); });
 document.addEventListener("click", e => { if (!$("fact").hidden && !e.target.closest("#fact")) toggleFact(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("fact").hidden) { toggleFact(false); $("today").focus(); } });
+
+/* ------------------------------------------------------------ the about card: what this is, in a paragraph */
+function toggleAbout(open) {
+  const card = $("about"), btn = $("about-btn");
+  open ??= card.hidden;
+  if (open) toggleFact(false);
+  card.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+}
+$("about-btn").addEventListener("click", e => { e.stopPropagation(); toggleAbout(); });
+document.addEventListener("click", e => { if (!$("about").hidden && !e.target.closest("#about")) toggleAbout(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("about").hidden) { toggleAbout(false); $("about-btn").focus(); } });
 
 /* ------------------------------------------------------------ wiring */
 $("next").addEventListener("click", () => show(idx + 1));
