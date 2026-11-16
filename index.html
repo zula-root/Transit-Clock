@@ -360,7 +360,7 @@ function lead(list, date) {
   const turn = (dayOfYear(date) + date.getHours() * 60 + date.getMinutes()) % top;
   return [...sorted.slice(turn, top), ...sorted.slice(0, turn), ...sorted.slice(top)];
 }
-// "Your time" mode writes every time the way the viewer's own clock does (7:51 p.m. vs 19:51)
+// Every time is written the way the viewer's own clock writes it (7:51 p.m. vs 19:51)
 const viewer12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
 function toMinutes(t) {
   if (t === "midnight") return 0;
@@ -913,7 +913,8 @@ function isoWeek(d) {
   return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7);
 }
 const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const leg = x => `<span class="tm">${esc(x.t)}</span> ${esc(x.v)} from ${esc(x.from)} to ${esc(x.to)} <span class="pl">· ${esc(x.place)}</span>`;
+// The day file is not tidied on arrival the way the hour files are, so names and times are tidied here.
+const leg = x => `<span class="tm">${esc(inViewerFormat(x.t))}</span> ${esc(x.v)} from ${esc(tidyStop(x.from))} to ${esc(tidyStop(x.to))} <span class="pl">· ${esc(x.place)}</span>`;
 function noteText(n, weekday) {
   if (n.kind === "none") return `No service in ${n.place} today.`;
   return `${n.place} is running ${n.pct}% ${n.kind} trips than a usual ${weekday}.`;
@@ -928,20 +929,34 @@ async function toggleFact(open) {
   const title = now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
   const year = new Date(now.getFullYear(), 1, 29).getMonth() === 1 ? 366 : 365;
   const foot = `<div class="foot">Day ${dayOfYear(now)} of ${year} · Week ${isoWeek(now)}</div>`;
-  let body;
+  let body, heading = `${title} on the timetables`;
   try {
-    const d = (await load("days"))[isoDate(now)];
-    body = !d ? `<p class="note">These timetables don't reach this date yet. Rebuilding the data will add it.</p>` : `
+    const all = await load("days");
+    let d = all[isoDate(now)], borrowed = "";
+    if (!d) {
+      // The timetables were collected for a fixed run of dates, and today is outside it. Rather than
+      // an apology, the card shows the last day in the run with the same name, and says that it has.
+      // That day's own notes are dropped: they compare it with a usual week and are not true of today.
+      const keys = Object.keys(all).sort();
+      const key = keys.slice().reverse().find(k => new Date(`${k}T12:00`).getDay() === now.getDay());
+      if (key) {
+        const long = k => new Date(`${k}T12:00`).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+        d = { ...all[key], notes: [] };
+        heading = `A ${weekday} on the timetables`;
+        borrowed = `<p class="note">These timetables run from ${esc(long(keys[0]))} to ${esc(long(keys[keys.length - 1]))}. This is the last ${esc(weekday)} in them.</p>`;
+      }
+    }
+    body = !d ? `<p class="note">These timetables don't reach this date.</p>` : `
       <p class="headline">${d.trips.toLocaleString()} trips on ${d.networks} networks.</p>
       <dl>
         ${d.first ? `<dt>First</dt><dd>${leg(d.first)}</dd>` : ""}
         ${d.last ? `<dt>Last</dt><dd>${leg(d.last)}</dd>` : ""}
       </dl>
-      ${d.notes.map(n => `<p class="note">${esc(noteText(n, weekday))}</p>`).join("")}`;
+      ${d.notes.map(n => `<p class="note">${esc(noteText(n, weekday))}</p>`).join("")}${borrowed}`;
   } catch {
     body = `<p class="note">Today's numbers didn't load. Reload the page to try again.</p>`;
   }
-  card.innerHTML = `<span class="eyebrow">${esc(title)} on the timetables</span>${body}${foot}`;
+  card.innerHTML = `<span class="eyebrow">${esc(heading)}</span>${body}${foot}`;
   card.hidden = false; btn.setAttribute("aria-expanded", "true");
 }
 $("today").addEventListener("click", e => { e.stopPropagation(); toggleFact(); });
