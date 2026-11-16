@@ -41,10 +41,11 @@ people name a train they mean to catch. This clock takes that literally.
   chip. Under it is the route as a board would show it, and a map that flies
   to the line.
 - **The time never changes.** It is always the time on your own clock, read
-  off a station clock somewhere else. The menu chooses which part of the
-  world that is: North America, Latin America, Europe & Africa or
-  Asia-Pacific. Where the timetables have nothing leaving from that region at
-  this minute, the clock says so and shows one from elsewhere.
+  off a station clock somewhere else. The chevrons at the top turn through
+  the parts of the world that station can be in: North America, Latin
+  America, Europe & Africa or Asia-Pacific. Where the timetables have nothing
+  leaving from that region at this minute, the clock says so and shows one
+  from elsewhere.
 - **Another 4:12** steps through the other departures that share the minute.
   The space bar and the arrow keys do the same.
 - The date in the corner opens a card with the day's first and last

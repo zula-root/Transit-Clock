@@ -106,19 +106,28 @@ header .right { display: flex; align-items: center; gap: 10px 16px; flex-wrap: w
 .fact-card a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
 .fact-card a:hover { text-decoration-style: solid; }
 
-/* The region menu: a plain select, dressed as a pill. A native menu is the right
-   control here: six choices, it works from the keyboard, and it opens as a wheel on a phone. */
-.region { position: relative; display: inline-flex; }
-.region select {
-  appearance: none; -webkit-appearance: none;
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--fg);
-  background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 30px 5px 14px; cursor: pointer;
+/* The region control: one name with a chevron on each side, turning through the parts of the world.
+   A native select was here first. It worked, but it read as a form field on a page that has no
+   forms, and it kept four of its five choices behind a tap. With so few, stepping is quicker than
+   choosing, and the name on show is always the one in force. */
+.region { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; }
+.region:hover, .region:focus-within { border-color: var(--muted); }
+.region button {
+  display: grid; place-items: center; width: 30px; height: 28px; padding: 0; cursor: pointer;
+  background: none; border: 0; border-radius: 999px; color: var(--muted);
 }
-.region select:hover { border-color: var(--fg); }
-.region::after {
-  content: ""; position: absolute; right: 13px; top: 50%; width: 5px; height: 5px; pointer-events: none;
-  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-75%) rotate(45deg);
-}
+.region button:hover { color: var(--fg); }
+.region button svg { width: 7px; height: 11px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* Every name sits in the same cell of a grid, so the control is as wide as the longest of them
+   and the chevrons never move under a finger. Only the name in force is shown. */
+.region .names { display: inline-grid; justify-items: center; overflow: hidden; padding-top: 2px; color: var(--fg); }
+.region .names span { grid-area: 1 / 1; white-space: nowrap; visibility: hidden; }
+.region .names span.on { visibility: visible; }
+/* The new name slides in from the side its chevron is on. */
+.region .names span.from-right { animation: region-from-right .26s ease; }
+.region .names span.from-left { animation: region-from-left .26s ease; }
+@keyframes region-from-right { from { opacity: 0; transform: translateX(12px); } }
+@keyframes region-from-left { from { opacity: 0; transform: translateX(-12px); } }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 main {
@@ -218,6 +227,10 @@ body.widget .cite b { color: var(--bg); }
   .route .stop:last-child { text-align: left; }
   .track { margin-block: 16px 4px; }
   header .now, header .sep { display: none; }
+  /* The chevrons close up a little so the controls still fit on one line of a 360px phone. */
+  header .right { gap: 10px 12px; }
+  .region button { width: 26px; }
+  .region .names { letter-spacing: .1em; }
 }
 /* The stand face: only the sentence and the time in the corner.
    The script decides when it is on, and sets --fit to the largest type that fits. */
@@ -229,7 +242,7 @@ body.widget .cite b { color: var(--bg); }
 .stand main { margin-block: auto; max-width: none; gap: clamp(10px, 2.4vh, 22px); padding-block: 10px 22px; cursor: pointer; }
 .stand .quote { font-size: var(--fit, 2rem); line-height: 1.2; }
 .stand .cite { font-size: 11px; }
-@media (prefers-reduced-motion: reduce) { main { transition: none; } }
+@media (prefers-reduced-motion: reduce) { main { transition: none; } .region .names span { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -237,18 +250,14 @@ body.widget .cite b { color: var(--bg); }
 <header>
   <span class="brand">Transit Clock</span>
   <span class="right">
-    <!-- One menu, in place of two mode buttons. The time on screen never changes;
-         this only chooses which part of the world the departure comes from. -->
-    <label class="region">
-      <span class="visually-hidden">Part of the world</span>
-      <select id="region" title="Which part of the world the departure comes from">
-        <option value="">The world</option>
-        <option value="na">North America</option>
-        <option value="la">Latin America</option>
-        <option value="eu">Europe &amp; Africa</option>
-        <option value="ap">Asia-Pacific</option>
-      </select>
-    </label>
+    <!-- The time on screen never changes. This only chooses which part of the world the
+         departure comes from. The names between the chevrons are written in by the script. -->
+    <span class="region" id="region" role="group" aria-label="Part of the world">
+      <button type="button" id="region-prev" aria-label="Previous part of the world"><svg viewBox="0 0 7 11" aria-hidden="true"><path d="M6 1 1.5 5.5 6 10"/></svg></button>
+      <span class="names" id="region-names"></span>
+      <button type="button" id="region-next" aria-label="Next part of the world"><svg viewBox="0 0 7 11" aria-hidden="true"><path d="M1 1l4.5 4.5L1 10"/></svg></button>
+      <span class="visually-hidden" id="region-said" aria-live="polite"></span>
+    </span>
     <button type="button" class="today" id="about-btn" aria-expanded="false" aria-controls="about">About</button>
     <span class="now-wrap"><button type="button" class="today" id="today" aria-expanded="false" aria-controls="fact"></button><span class="sep" aria-hidden="true"> · </span><span class="now" id="now">--:--</span></span>
   </span>
@@ -257,7 +266,7 @@ body.widget .cite b { color: var(--bg); }
     <span class="eyebrow">About this clock</span>
     <p class="headline">A clock made of timetables.</p>
     <p class="body">Each minute it shows a real train, ferry or bus that is timetabled to leave at exactly that minute, somewhere in the world. There is one for all 1,440 minutes of the day.</p>
-    <p class="body">The time on screen is always the time on your own clock, read off a station clock somewhere else. The menu chooses which part of the world that is.</p>
+    <p class="body">The time on screen is always the time on your own clock, read off a station clock somewhere else. The chevrons at the top choose which part of the world that is.</p>
     <p class="note">The idea is borrowed from the <a href="https://literature-clock.jenevoldsen.com/" target="_blank" rel="noopener">literary clock</a>, which tells the time with sentences from novels. Timetables turn out to be full of sentences too.</p>
     <div class="foot">Times come from the operators’ published timetables. Left open on a stand, the page keeps the screen awake.</div>
   </div>
@@ -394,7 +403,7 @@ const LATIN = /^America\/(Santiago|Mexico_City|Fortaleza|Sao_Paulo|Bogota|Lima|B
 // Every departure carries the time zone of the place it leaves from, and that is enough to place it.
 function regionOf(x) {
   const tz = x.tz || "";
-  // Africa has too few departures in these timetables to fill a menu entry of its own (about
+  // Africa has too few departures in these timetables to fill a region of its own (about
   // one minute in five), so it shares one with Europe. Georgia's railways are filed with Europe's too.
   if (tz === "Asia/Tbilisi" || tz.startsWith("Europe/") || tz.startsWith("Africa/")) return "eu";
   if (/^(Asia|Australia|Pacific)\//.test(tz)) return "ap";
@@ -402,6 +411,8 @@ function regionOf(x) {
   return "";
 }
 let region = "";   // "" is the whole world
+const REGION_ORDER = ["", "na", "la", "eu", "ap"];   // the order the chevrons turn through
+const regionName = r => r ? REGIONS[r] : "The world";
 
 async function clockList(now) {
   const key = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -571,12 +582,26 @@ if (document.fonts) document.fonts.ready.then(fit);
 // With the buttons gone, a tap on the sentence is how to see the minute's other departures.
 $("card").addEventListener("click", () => { if (document.documentElement.classList.contains("stand")) show(idx + 1); });
 
-function setRegion(r) {
+/* The region control
+   dir says which chevron was pressed (1 is the right-hand one), so the new name can slide in from
+   that side. With no dir the name is simply set, as it is when the page opens. */
+function drawRegion(dir = 0) {
+  const names = $("region-names");
+  if (!names.children.length) names.innerHTML = REGION_ORDER.map(r => `<span data-r="${r}">${esc(regionName(r))}</span>`).join("");
+  for (const el of names.children) {
+    const on = el.dataset.r === region;
+    el.className = on ? `on${dir > 0 ? " from-right" : dir < 0 ? " from-left" : ""}` : "";
+    el.setAttribute("aria-hidden", String(!on));
+  }
+  if (dir) $("region-said").textContent = regionName(region);   // read out to a screen reader when it changes
+}
+function setRegion(r, dir = 0) {
   region = REGIONS[r] ? r : "";
-  $("region").value = region;
+  drawRegion(dir);
   store.set("transit-clock-region", region);
   refresh(true);
 }
+const stepRegion = dir => setRegion(REGION_ORDER[(REGION_ORDER.indexOf(region) + dir + REGION_ORDER.length) % REGION_ORDER.length], dir);
 
 /* ------------------------------------------------------------ globe: dot-matrix map that flies to each route */
 const globe = (() => {
@@ -979,7 +1004,13 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("about"
 
 /* ------------------------------------------------------------ wiring */
 $("next").addEventListener("click", () => show(idx + 1));
-$("region").addEventListener("change", e => setRegion(e.target.value));
+$("region-prev").addEventListener("click", () => stepRegion(-1));
+$("region-next").addEventListener("click", () => stepRegion(1));
+// With the control in focus the arrow keys turn it. Anywhere else they step through the minute's departures.
+$("region").addEventListener("keydown", e => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault(); stepRegion(e.key === "ArrowRight" ? 1 : -1);
+});
 document.addEventListener("keydown", e => {
   if (e.target.closest("button, select")) return;
   if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); show(idx + 1); }
@@ -989,7 +1020,7 @@ if (location.hash === "#widget") document.body.classList.add("widget");
 addEventListener("hashchange", () => document.body.classList.toggle("widget", location.hash === "#widget"));
 // ?region=eu opens on one part of the world. Otherwise the last choice is remembered.
 region = (r => REGIONS[r] ? r : "")(new URLSearchParams(location.search).get("region") ?? store.get("transit-clock-region") ?? "");
-$("region").value = region;
+drawRegion();
 
 /* Stay awake
    Left open on a phone or tablet stand, this is a desk clock, and a desk clock
