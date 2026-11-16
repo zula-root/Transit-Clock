@@ -3,6 +3,11 @@
 A clock made of timetables. Every minute it shows a real train, ferry or bus
 that is timetabled to leave at exactly that minute, somewhere in the world.
 
+It is one of two **Sentence Clocks**. The other is the
+[Docket Clock](https://github.com/zula-root/Docket-Clock), which tells the
+time in sentences from court opinions. A switch in the corner of each page
+leads to the other.
+
 > The **7:12 a.m.** Nozomi leaves Tokyo for Hakata.
 >
 > *It reaches Hakata at 12:09 p.m., 4 hours and 57 minutes later.*
