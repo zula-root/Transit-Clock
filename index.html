@@ -128,6 +128,31 @@ header .right { display: flex; align-items: center; gap: 10px 16px; flex-wrap: w
 .region .names span.from-left { animation: region-from-left .26s ease; }
 @keyframes region-from-right { from { opacity: 0; transform: translateX(12px); } }
 @keyframes region-from-left { from { opacity: 0; transform: translateX(-12px); } }
+
+/* The one loud thing in the header: how to keep the clock. It is filled where everything else is outlined. */
+header .right { margin-left: auto; }
+header .add-btn {
+  font: inherit; font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+  color: var(--bg); background: var(--fg); border: 1px solid var(--fg); border-radius: 999px; padding: 8px 14px 6px; cursor: pointer;
+}
+header .add-btn:hover, header .add-btn[aria-expanded="true"] { color: var(--fg); background: none; }
+/* Inside its card: one tab for each kind of device, then the steps for the one chosen. */
+.fact-card .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.fact-card .tabs button {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px 4px; cursor: pointer;
+}
+.fact-card .tabs button:hover { color: var(--fg); border-color: var(--muted); }
+.fact-card .tabs button[aria-selected="true"] { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.fact-card .steps { display: flex; flex-direction: column; gap: 12px; }
+.fact-card ol, .fact-card ul { margin: 0; padding-left: 1.25em; display: grid; gap: 7px; font-family: var(--serif); font-size: 15px; line-height: 1.35; }
+.fact-card li b { font-family: var(--sans); font-weight: 700; font-size: .88em; }
+.fact-card li svg { display: inline-block; width: .82em; height: 1.02em; vertical-align: -.14em; margin-inline: .12em; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.fact-card li svg.dots { fill: currentColor; stroke: none; }
+.fact-card .install {
+  align-self: flex-start; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--sign-ink); background: var(--sign); border: 0; border-radius: 999px; padding: 9px 16px 7px; cursor: pointer;
+}
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 main {
@@ -227,16 +252,23 @@ body.widget .cite b { color: var(--bg); }
   .route .stop:last-child { text-align: left; }
   .track { margin-block: 16px 4px; }
   header .now, header .sep { display: none; }
-  /* The chevrons close up a little so the controls still fit on one line of a 360px phone. */
-  header .right { gap: 10px 12px; }
+  /* Two rows: the name and the Add button, then the controls. The chevrons close up a little so
+     the controls still fit on one line of a 360px phone. */
+  header .add-btn { order: 1; margin-left: auto; }
+  header .right { order: 2; flex: 1 0 100%; margin-left: 0; gap: 10px 12px; }
   .region button { width: 26px; }
   .region .names { letter-spacing: .1em; }
+}
+/* The narrowest phones: the Add button gives up a little air so it still sits beside the name. */
+@media (max-width: 340px) {
+  header { column-gap: 10px; }
+  header .add-btn { padding-inline: 10px; letter-spacing: .06em; }
 }
 /* The stand face: only the sentence and the time in the corner.
    The script decides when it is on, and sets --fit to the largest type that fits. */
 .stand body { padding-inline: clamp(20px, 5vw, 64px); }
 .stand header { padding-block: 16px 0; }
-.stand header .region, .stand header .today, .stand header .sep { display: none; }
+.stand header .region, .stand header .today, .stand header .sep, .stand header .add-btn { display: none; }
 .stand header .now { color: var(--fg); font-size: 14px; }
 .stand .kicker, .stand .route, .stand .map, .stand footer { display: none; }
 .stand main { margin-block: auto; max-width: none; gap: clamp(10px, 2.4vh, 22px); padding-block: 10px 22px; cursor: pointer; }
@@ -261,7 +293,20 @@ body.widget .cite b { color: var(--bg); }
     <button type="button" class="today" id="about-btn" aria-expanded="false" aria-controls="about">About</button>
     <span class="now-wrap"><button type="button" class="today" id="today" aria-expanded="false" aria-controls="fact"></button><span class="sep" aria-hidden="true"> · </span><span class="now" id="now">--:--</span></span>
   </span>
+  <button type="button" class="add-btn" id="add-btn" aria-expanded="false" aria-controls="add">Add to your device</button>
   <div class="fact-card" id="fact" role="dialog" aria-label="Today on the timetables" hidden></div>
+  <div class="fact-card" id="add" role="dialog" aria-label="Add this clock to your device" hidden>
+    <span class="eyebrow">Add to your device</span>
+    <p class="headline">Keep the clock. It runs full screen, like an app.</p>
+    <div class="tabs" id="add-tabs" role="tablist" aria-label="Your device">
+      <button type="button" role="tab" data-os="iphone">iPhone</button>
+      <button type="button" role="tab" data-os="ipad">iPad</button>
+      <button type="button" role="tab" data-os="android">Android</button>
+      <button type="button" role="tab" data-os="computer">Mac or PC</button>
+    </div>
+    <div class="steps" id="add-steps" role="tabpanel"></div>
+    <div class="foot">It is this page, saved to your device. There is nothing to download and nothing to sign in to.</div>
+  </div>
   <div class="fact-card" id="about" role="dialog" aria-label="About this clock" hidden>
     <span class="eyebrow">About this clock</span>
     <p class="headline">A clock made of timetables.</p>
@@ -950,7 +995,7 @@ function noteText(n, weekday) {
 async function toggleFact(open) {
   const card = $("fact"), btn = $("today");
   open ??= card.hidden;
-  if (open) toggleAbout(false);
+  if (open) { toggleAbout(false); toggleAdd(false); }
   if (!open) { card.hidden = true; btn.setAttribute("aria-expanded", "false"); return; }
   const now = new Date();
   const weekday = now.toLocaleDateString(undefined, { weekday: "long" });
@@ -995,12 +1040,86 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("fact")
 function toggleAbout(open) {
   const card = $("about"), btn = $("about-btn");
   open ??= card.hidden;
-  if (open) toggleFact(false);
+  if (open) { toggleFact(false); toggleAdd(false); }
   card.hidden = !open; btn.setAttribute("aria-expanded", String(open));
 }
 $("about-btn").addEventListener("click", e => { e.stopPropagation(); toggleAbout(); });
 document.addEventListener("click", e => { if (!$("about").hidden && !e.target.closest("#about")) toggleAbout(false); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("about").hidden) { toggleAbout(false); $("about-btn").focus(); } });
+
+/* ------------------------------------------------------------ add to your device
+   The clock is a web page, and a web page cannot put itself on a Home Screen: the person has
+   to do it from the browser's own menu, and the menu is different on every device. So the
+   button opens a card with the steps for the device in hand, and tabs for the others.
+
+   Chrome and Edge, on Android and on a computer, will sometimes offer to install a page
+   themselves. When one does, the card shows a real Install button above the steps. */
+// The icons are drawn here, because the text faces on this page have no three-dot characters.
+const SHARE = `<svg viewBox="0 0 17 21" role="img" aria-label="the Share icon"><path d="M5 7H2.5v12.5h12V7H12M8.5 13V1.5M5 4.6l3.5-3.1L12 4.6"/></svg>`;
+const dots = (label, across) => `<svg class="dots" viewBox="0 0 17 21" role="img" aria-label="${label}">${[4.5, 10.5, 16.5].map(v => `<circle cx="${across ? v - 2 : 8.5}" cy="${across ? 12.5 : v}" r="1.5"/>`).join("")}</svg>`;
+const MORE_DOWN = dots("the three-dot menu", false), MORE_ACROSS = dots("the three-dot button", true);
+const ADD_STEPS = {
+  iphone: `<ol>
+      <li>Open this page in <b>Safari</b>.</li>
+      <li>Tap <b>Share</b> ${SHARE}. On a newer iPhone it is behind the ${MORE_ACROSS} button.</li>
+      <li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      <li>Open <b>Transit Clock</b> from its new icon.</li>
+    </ol>
+    <p class="note">Turn the phone on its side, or fold it into a tent, and the clock becomes one large sentence.</p>`,
+  ipad: `<ol>
+      <li>Open this page in <b>Safari</b>.</li>
+      <li>Tap <b>Share</b> ${SHARE} in the toolbar.</li>
+      <li>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</li>
+      <li>Open <b>Transit Clock</b> from its new icon, and stand the iPad up.</li>
+    </ol>`,
+  android: `<ol>
+      <li>Open this page in <b>Chrome</b>.</li>
+      <li>Tap ${MORE_DOWN}, then <b>Add to Home screen</b>.</li>
+      <li>Choose <b>Install</b>.</li>
+    </ol>
+    <p class="note">Turn the phone on its side and the clock becomes one large sentence.</p>`,
+  computer: `<ul>
+      <li><b>Chrome:</b> open the ${MORE_DOWN} menu, then <b>Cast, Save and Share</b>, and choose <b>Install</b>.</li>
+      <li><b>Edge:</b> open the ${MORE_ACROSS} menu, then <b>Apps</b>, and choose <b>Install</b>.</li>
+      <li><b>Safari on a Mac:</b> choose <b>File</b>, then <b>Add to Dock</b>.</li>
+    </ul>`,
+};
+// iPadOS calls itself a Mac, so a Mac with a touch screen is taken to be an iPad.
+function thisDevice() {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return "android";
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "ipad";
+  if (/iPhone|iPod/.test(ua)) return "iphone";
+  return "computer";
+}
+let addOs = thisDevice(), installOffer = null;
+function drawAdd() {
+  for (const tab of $("add-tabs").children) tab.setAttribute("aria-selected", String(tab.dataset.os === addOs));
+  // The browser's own offer only applies to the device the page is open on.
+  const offer = installOffer && addOs === thisDevice() ? `<button type="button" class="install" id="install">Install Transit Clock</button>` : "";
+  $("add-steps").innerHTML = offer + ADD_STEPS[addOs];
+}
+function toggleAdd(open) {
+  const card = $("add"), btn = $("add-btn");
+  open ??= card.hidden;
+  if (open) { toggleFact(false); toggleAbout(false); addOs = thisDevice(); drawAdd(); }
+  card.hidden = !open; btn.setAttribute("aria-expanded", String(open));
+}
+$("add-btn").addEventListener("click", e => { e.stopPropagation(); toggleAdd(); });
+$("add-tabs").addEventListener("click", e => { const tab = e.target.closest("[data-os]"); if (tab) { addOs = tab.dataset.os; drawAdd(); } });
+$("add-steps").addEventListener("click", async e => {
+  if (!e.target.closest("#install") || !installOffer) return;
+  installOffer.prompt();
+  await installOffer.userChoice.catch(() => {});
+  installOffer = null; drawAdd();
+});
+document.addEventListener("click", e => { if (!$("add").hidden && !e.target.closest("#add")) toggleAdd(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("add").hidden) { toggleAdd(false); $("add-btn").focus(); } });
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installOffer = e; if (!$("add").hidden) drawAdd(); });
+// Once it is on the device there is nothing left to offer: not after installing, and not when opened from the icon.
+const hideAdd = () => { toggleAdd(false); $("add-btn").hidden = true; };
+addEventListener("appinstalled", hideAdd);
+if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) hideAdd();
 
 /* ------------------------------------------------------------ wiring */
 $("next").addEventListener("click", () => show(idx + 1));
