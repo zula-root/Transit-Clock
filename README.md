@@ -11,6 +11,10 @@ that is timetabled to leave at exactly that minute, somewhere in the world.
 
 **Live:** https://zula-root.github.io/Transit-Clock/
 
+![The Transit Clock on a foldable phone standing open on a desk, showing the 3:57 p.m. Floridian](docs/duo.jpg)
+
+*A rendering of the clock on an iPhone Duo, not a photograph.*
+
 Every minute is somebody's train. There are 9,989 departures in the data, and
 all 1,440 minutes of the day have at least six.
 
@@ -109,3 +113,5 @@ There is no build step and nothing to install.
 - Type: Newsreader, Overpass and Overpass Mono.
 - A sibling: the [Docket Clock](https://github.com/zula-root/Docket-Clock),
   which tells the time with sentences from court opinions.
+
+![The Transit Clock and the Docket Clock side by side on two foldable phones](docs/duo-pair.jpg)
