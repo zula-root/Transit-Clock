@@ -223,7 +223,33 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch { return 
 /* ------------------------------------------------------------ data */
 const files = {};
 const load = name => files[name] ??= fetch(`data/${name}.json`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
-const hour = h => load(pad(h));
+
+/* Stop names, as a person would say them
+   Timetable feeds name stops for machines, and a few of their habits made the
+   sentence read like a database row. These are rewritten for display only;
+   the data files are untouched.
+     "PA138-Parada 7 / (M) Santa Lucía"    ->  "Santa Lucía"        Santiago stop codes
+     "[CTB] TIN SHUI WAI|[KMB] TIN SHUI…"  ->  "Tin Shui Wai"       Hong Kong lists one name per operator
+     "Stop 17 Moseley Square"              ->  "Moseley Square"     Adelaide stop numbers
+     "Godhra Jn", "Akola Jn."              ->  "Godhra Junction"    Indian Railways shorthand */
+function tidyStop(name) {
+  let s = String(name).split("|")[0].replace(/\/?<br>.*$/i, "");    // the first of several operator names
+  s = s.replace(/^\[[^\]]+\]\s*/, "")                               // "[CTB] "
+       .replace(/^[A-Z]{1,3}\d+-(?:Parada \d+ \/ )?/, "")            // "PA138-Parada 7 / "
+       .replace(/^\(M\)\s*/, "")                                    // "(M) " marks a metro interchange
+       .replace(/^Stop \w+ /, "").replace(/ - (?:North|South|East|West) side$/, "");
+  // A name set entirely in capitals is a feed's habit, not the station's.
+  if (s.length > 4 && s === s.toUpperCase() && /\p{L}/u.test(s)) s = s.toLowerCase().replace(/(^|[\s\-(\/])\p{L}/gu, c => c.toUpperCase());
+  s = s.replace(/\bJn\b\.?/g, "Junction");
+  return s.trim() || String(name);
+}
+
+// Each hour's file is tidied once, as it arrives, so every part of the page sees the same names.
+const hours = {};
+const hour = h => hours[h] ??= load(pad(h)).then(day => {
+  for (const list of Object.values(day)) for (const x of list) { x.from = tidyStop(x.from); x.to = tidyStop(x.to); }
+  return day;
+});
 
 const fmtCache = {};
 function localKey(tz, date) {
@@ -244,6 +270,33 @@ const weekdayIn = (tz, d) => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].i
 function running(list, wdOf) {
   const today = list.filter(x => runsOn(x, wdOf(x)));
   return today.length ? today : list;
+}
+
+/* Which departure opens the minute
+   The first sentence a visitor reads decides whether the clock makes sense.
+   The data lists a minute's departures in no particular order, so the page
+   used to open on whatever came first: often a regional express between two
+   junctions, or a city bus. Now the minute opens on a departure a stranger can
+   picture, and every other one is still a tap away.
+
+   Three tiers, best first:
+     0  a train with a name or a long-distance brand (the Floridian, an ICE,
+        a night train), or a ferry or cable car
+     1  any other train
+     2  metros, trams and buses
+   Inside the opening tier the choice turns with the date, so tomorrow's 4:12
+   is not today's. */
+const MARQUEE = /^(ICE|TGV|AVE|ALVIA|EuroCity|EuroNight|InterCity|Intercités|Pendolino|night train|European Sleeper|VIA train|Caltrain|Al Boraq|Al Atlas)$|Express$/;
+function tier(x) {
+  if (x.named || MARQUEE.test(x.v) || x.kind === "ferry" || x.kind === "gondola") return 0;
+  return x.kind === "train" ? 1 : 2;
+}
+function lead(list, date) {
+  if (list.length < 2) return list;
+  const sorted = list.map((x, i) => [tier(x), i, x]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(r => r[2]);
+  const top = sorted.filter(x => tier(x) === tier(sorted[0])).length;
+  const turn = (dayOfYear(date) + date.getHours() * 60 + date.getMinutes()) % top;
+  return [...sorted.slice(turn, top), ...sorted.slice(0, turn), ...sorted.slice(top)];
 }
 // "Your clock" mode writes every time the way the viewer's own clock does (7:51 p.m. vs 19:51)
 const viewer12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
@@ -270,7 +323,7 @@ async function clockList(now) {
   const wd = (now.getDay() + 6) % 7;
   const list = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
   const shown = viewerTime(now.getHours() * 60 + now.getMinutes());
-  return { list: running(list, () => wd), hint: `Departures timed ${shown} on local clocks around the world.` };
+  return { list: lead(running(list, () => wd), now), hint: `Departures timed ${shown} on local clocks around the world.` };
 }
 async function liveList(now) {
   const all = await everything();
@@ -279,10 +332,10 @@ async function liveList(now) {
     const wds = {};
     return running(all.filter(x => x.tz && x.key === (keys[x.tz] ??= localKey(x.tz, d))), x => (wds[x.tz] ??= weekdayIn(x.tz, d)));
   };
-  let list = at(now);
+  let list = lead(at(now), now);
   if (list.length) return { list, hint: `Leaving right now, each on its own local clock.` };
   for (let k = 1; k <= 20; k++) {
-    list = at(new Date(now.getTime() + k * 60000));
+    list = lead(at(new Date(now.getTime() + k * 60000)), now);
     if (list.length) return { list, hint: `Nothing leaves this exact minute. These go in ${k} min.` };
   }
   return { list: [], hint: "The world's timetables are quiet for a moment." };
