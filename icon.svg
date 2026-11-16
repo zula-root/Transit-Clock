@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The departure-board chip from the clock face: a time in amber on slate. -->
+  <rect width="512" height="512" fill="#0f1820"/>
+  <rect x="72" y="176" width="368" height="160" rx="22" fill="#f2b33d"/>
+  <text x="256" y="304" text-anchor="middle" font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" font-weight="800" font-size="138" letter-spacing="-2" fill="#14202b">4:12</text>
+</svg>

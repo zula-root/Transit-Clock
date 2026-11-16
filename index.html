@@ -1,12 +1,33 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Transit Clock</title>
+<meta name="description" content="A clock made of timetables. Every minute it shows a real train, ferry or bus that leaves at exactly that time, somewhere in the world.">
+<meta property="og:title" content="Transit Clock">
+<meta property="og:description" content="Every minute is somebody’s train. A clock made of real timetables.">
+<meta property="og:type" content="website">
 <meta name="theme-color" content="#0f1820">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Transit Clock">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Added to a phone's Home Screen, the clock opens full screen with its own icon. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..500&family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@400;600&display=swap">
 <style>
+/* Base: the handful of rules the layout below takes for granted. */
+:root { color-scheme: light; box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin: 0; padding: 0; font-size: 14px; }
+img { max-width: 100%; }
+[hidden]:not([hidden="until-found" i]) { display: none !important; }
+
 /* Layout: a sentence set like a book, a departure-board strip under it, and a dot-matrix map that flies to each route */
 :root {
   --bg: #eef0f2;
@@ -192,6 +213,8 @@ body.widget .cite b { color: var(--bg); }
 }
 @media (prefers-reduced-motion: reduce) { main { transition: none; } .modes .live-dot { animation: none !important; } }
 </style>
+</head>
+<body>
 
 <header>
   <span class="brand">Transit Clock</span>
@@ -242,6 +265,9 @@ const pad = n => String(n).padStart(2, "0");
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+// ?theme=dark or ?theme=light holds one theme whatever the device is set to. Dark suits a bedside.
+{ const t = new URLSearchParams(location.search).get("theme"); if (t === "dark" || t === "light") document.documentElement.dataset.theme = t; }
 
 /* ------------------------------------------------------------ data */
 const files = {};

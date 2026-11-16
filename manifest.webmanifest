@@ -1,0 +1,15 @@
+{
+  "name": "Transit Clock",
+  "short_name": "Transit Clock",
+  "description": "A clock made of timetables. Every minute is somebody's train.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1820",
+  "theme_color": "#0f1820",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
