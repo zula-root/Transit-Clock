@@ -474,8 +474,20 @@ async function clockList(now) {
   // The chosen region comes first. Where these timetables have nothing leaving from it at this
   // minute, the clock does not go blank or skip ahead: it says so, and shows the minute from elsewhere.
   const local = region ? all.filter(x => regionOf(x) === region) : all;
+  const hint = `A real departure, timetabled for ${shown} on a station clock somewhere in ${region ? REGIONS[region] : "the world"}.`;
+  if (pinned) {
+    /* A pinned minute is a link to one train, so it must read the same on any day it is opened.
+       The live clock leaves out trains that do not run today and turns its opening choice with
+       the date. A pinned one does neither. If the link names a train, that train opens the
+       minute, until the reader turns the region and asks for something else. */
+    const still = new Date(2000, 0, 1, now.getHours(), now.getMinutes());
+    const i = picked ? all.findIndex(x => `${x.v} ${x.from} ${x.to}`.toLowerCase().includes(picked)) : -1;
+    if (i >= 0) return { list: [all[i], ...lead(all.filter((_, j) => j !== i), still)], hint };
+    if (region && !local.length) return { list: lead(all, still), elsewhere: true, hint: `These timetables have no ${shown} in ${REGIONS[region]}. This one is from elsewhere.` };
+    return { list: lead(local, still), hint };
+  }
   if (region && !local.length) return { list: lead(running(all, () => wd), now), elsewhere: true, hint: `These timetables have no ${shown} in ${REGIONS[region]}. This one is from elsewhere.` };
-  return { list: lead(running(local, () => wd), now), hint: `A real departure, timetabled for ${shown} on a station clock somewhere in ${region ? REGIONS[region] : "the world"}.` };
+  return { list: lead(running(local, () => wd), now), hint };
 }
 
 /* ------------------------------------------------------------ words */
@@ -537,12 +549,15 @@ let list = [], idx = 0, shownKey = "", elsewhere = false;
 
 /* A fixed minute, for sharing
    index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
-   there, so a link can point at one particular train. Without ?at the clock
-   follows the real time. */
+   there, so a link can point at one particular train. Adding &pick=floridian
+   says which of that minute's trains to open on. Without ?at the clock follows
+   the real time. */
 const pinned = (() => {
   const m = (new URLSearchParams(location.search).get("at") || "").match(/^(\d{1,2}):?(\d{2})$/);
   return m && +m[1] < 24 && +m[2] < 60 ? [+m[1], +m[2]] : null;
 })();
+// &pick=floridian goes with ?at and names the train to open on: a word or two from its name or its stations.
+let picked = pinned ? (new URLSearchParams(location.search).get("pick") || "").trim().toLowerCase() : "";
 function clockNow() {
   const d = new Date();
   if (pinned) d.setHours(pinned[0], pinned[1], 0, 0);
@@ -647,6 +662,7 @@ function drawRegion(dir = 0) {
 }
 function setRegion(r, dir = 0) {
   region = REGIONS[r] ? r : "";
+  if (dir) picked = "";   // a train named in the link gives way once the reader chooses a region
   drawRegion(dir);
   store.set("transit-clock-region", region);
   refresh(true);

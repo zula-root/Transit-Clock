@@ -97,7 +97,8 @@ A few options go on the end of the address:
 | Add this | What it does |
 | --- | --- |
 | `?theme=dark` or `?theme=light` | Holds one theme whatever the device is set to. Dark suits a bedside. |
-| `?at=16:12` | Holds the clock at one minute, to share a single train. |
+| `?at=16:12` | Holds the clock at one minute, to share a single train. It reads the same on any day. |
+| `&pick=floridian` | With `?at`, opens on one train: a word or two from its name or its stations. |
 | `?face=stand` | The stand face on any screen. `?face=full` keeps the whole page. |
 | `?region=eu` | Opens on one part of the world: `na`, `la`, `eu` or `ap`. |
 | `#widget` | A square card the size of a Home Screen widget. |
