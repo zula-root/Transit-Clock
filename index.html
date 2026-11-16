@@ -302,17 +302,21 @@ function running(list, wdOf) {
    junctions, or a city bus. Now the minute opens on a departure a stranger can
    picture, and every other one is still a tap away.
 
-   Three tiers, best first:
+   Four tiers, best first:
      0  a train with a name or a long-distance brand (the Floridian, an ICE,
-        a night train), or a ferry or cable car
-     1  any other train
-     2  metros, trams and buses
+        a night train), or a ferry or cable car, that starts or ends in a
+        city a stranger has probably heard of
+     1  the same kinds of departure, anywhere else
+     2  any other train
+     3  metros, trams and buses
    Inside the opening tier the choice turns with the date, so tomorrow's 4:12
    is not today's. */
 const MARQUEE = /^(ICE|TGV|AVE|ALVIA|EuroCity|EuroNight|InterCity|Intercités|Pendolino|night train|European Sleeper|VIA train|Caltrain|Al Boraq|Al Atlas)$|Express$/;
+// A short list, written by hand, in the spellings the timetables use. It only decides what is shown first.
+const KNOWN = /New York|Washington|Chicago|Boston|Philadelphia|Los Angeles|San Francisco|Seattle|New Orleans|Miami|Portland|Denver|San Diego|Toronto|Vancouver|Montr[eé]al|Ottawa|Qu[eé]bec|Halifax|Paris|Lyon|Marseille|Bordeaux|Nice|Strasbourg|Berlin|M[üu]nchen|Hamburg|Frankfurt|K[öo]ln|Stuttgart|Dresden|Leipzig|Wien|Z[üu]rich|Basel|Amsterdam|Bruxelles|Brussel|Antwerpen|London|Madrid|Barcelona|Sevilla|Val[eè]ncia|M[áa]laga|Lisboa|Porto|Helsinki|Rovaniemi|Oslo|Bergen|Stockholm|K[øo]benhavn|Praha|Warszawa|Krak[oó]w|Budapest|Milano|Roma|Venezia|Tbilisi|Batumi|Casablanca|Marrakech|Tanger|Delhi|Mumbai|Kolkata|Howrah|Chennai|Bengaluru|Hong Kong|Central Pier|Auckland|Perth|Dublin|Lagos/;
 function tier(x) {
-  if (x.named || MARQUEE.test(x.v) || x.kind === "ferry" || x.kind === "gondola") return 0;
-  return x.kind === "train" ? 1 : 2;
+  if (x.named || MARQUEE.test(x.v) || x.kind === "ferry" || x.kind === "gondola") return KNOWN.test(x.from) || KNOWN.test(x.to) ? 0 : 1;
+  return x.kind === "train" ? 2 : 3;
 }
 function lead(list, date) {
   if (list.length < 2) return list;
