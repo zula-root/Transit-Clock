@@ -11,9 +11,9 @@ that is timetabled to leave at exactly that minute, somewhere in the world.
 
 **Live:** https://zula-root.github.io/Transit-Clock/
 
-![The Transit Clock on a foldable phone standing open on a desk, showing the 3:57 p.m. Floridian](docs/duo.jpg)
+![The Transit Clock on a phone folded into a tent on a desk, showing the 3:57 p.m. Floridian](docs/duo-stand.jpg)
 
-*A rendering of the clock on an iPhone Duo, not a photograph.*
+*The clock's stand face on a folded iPhone Duo. A rendering, not a photograph.*
 
 Every minute is somebody's train. There are 9,989 departures in the data, and
 all 1,440 minutes of the day have at least six.
@@ -30,6 +30,10 @@ A timetable turns out to be full of sentences too. "The 4:12" is already how
 people name a train they mean to catch. This clock takes that literally.
 
 ## How to read it
+
+![The whole page on the same phone opened like a book: the sentence, the route and the map](docs/duo.jpg)
+
+*The whole page, on the same phone opened like a book. Also a rendering.*
 
 - **The line above the sentence** says what the clock is and which train this
   is: "Every minute is somebody's train. This is the 4:12."
@@ -71,8 +75,9 @@ Follow the same steps. Then fold the phone into a tent with the outer screen
 facing you, or stand it open like a book.
 
 On a small, wide screen the clock switches to its **stand face** by itself:
-only the sentence, set as large as will fit, the line it runs on, and the time in the corner.
-A phone turned on its side does the same.
+only the sentence, set as large as will fit, the line it runs on, and the
+time in the corner. That is the picture at the top of this page. A phone
+turned on its side does the same.
 
 This is the page running full screen. It is not iOS StandBy, which only shows
 widgets from installed apps and so cannot show a web page.
@@ -127,4 +132,4 @@ There is no build step and nothing to install.
 - A sibling: the [Docket Clock](https://github.com/zula-root/Docket-Clock),
   which tells the time with sentences from court opinions.
 
-![The Transit Clock and the Docket Clock side by side on two foldable phones](docs/duo-pair.jpg)
+![The Transit Clock and the Docket Clock side by side on two folded phones](docs/duo-stand-pair.jpg)
