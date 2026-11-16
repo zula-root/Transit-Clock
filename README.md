@@ -67,7 +67,17 @@ on the stand.
 
 **A foldable, such as iPhone Duo**
 
-Follow the same steps, then open the phone part-way and stand it on the desk.
+Follow the same steps. Then fold the phone into a tent with the outer screen
+facing you, or stand it open like a book.
+
+On a small, wide screen the clock switches to its **stand face** by itself:
+only the sentence, set as large as will fit, the line it runs on, and the time in the corner.
+A phone turned on its side does the same.
+
+This is the page running full screen. It is not iOS StandBy, which only shows
+widgets from installed apps and so cannot show a web page.
+
+On the stand face, tap the sentence to see the minute's other departures.
 
 **Android**
 
@@ -80,6 +90,7 @@ A few options go on the end of the address:
 | --- | --- |
 | `?theme=dark` or `?theme=light` | Holds one theme whatever the device is set to. Dark suits a bedside. |
 | `?at=16:12` | Holds the clock at one minute, to share a single train. |
+| `?face=stand` | The stand face on any screen. `?face=full` keeps the whole page. |
 | `?region=eu` | Opens on one part of the world: `na`, `la`, `eu` or `ap`. |
 | `#widget` | A square card the size of a Home Screen widget. |
 

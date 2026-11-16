@@ -24,7 +24,7 @@
 /* Base: the handful of rules the layout below takes for granted. */
 :root { color-scheme: light; box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 html { scroll-padding-top: env(safe-area-inset-top, 0px); }
-body { margin: 0; padding: 0; font-size: 14px; }
+body { margin: 0; padding: 0 env(safe-area-inset-right, 0px) 0 env(safe-area-inset-left, 0px); font-size: 14px; }
 img { max-width: 100%; }
 [hidden]:not([hidden="until-found" i]) { display: none !important; }
 
@@ -216,6 +216,16 @@ body.widget .cite b { color: var(--bg); }
   .track { margin-block: 16px 4px; }
   header .now, header .sep { display: none; }
 }
+/* The stand face: only the sentence and the time in the corner.
+   The script decides when it is on, and sets --fit to the largest type that fits. */
+.stand body { padding-inline: clamp(20px, 5vw, 64px); }
+.stand header { padding-block: 16px 0; }
+.stand header .region, .stand header .today, .stand header .sep { display: none; }
+.stand header .now { color: var(--fg); font-size: 14px; }
+.stand .kicker, .stand .route, .stand .map, .stand footer { display: none; }
+.stand main { margin-block: auto; max-width: none; gap: clamp(10px, 2.4vh, 22px); padding-block: 10px 22px; cursor: pointer; }
+.stand .quote { font-size: var(--fit, 2rem); line-height: 1.2; }
+.stand .cite { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { main { transition: none; } }
 </style>
 </head>
@@ -493,6 +503,7 @@ function render(x) {
   $("count").textContent = list.length > 1 ? `${idx + 1} / ${list.length}` : "";
   // The button says what tapping it gives you: another train with this same time on its board.
   $("next").textContent = /^\d/.test(x.t) ? `Another ${short(x.t)}` : "Another departure";
+  fit();
   globe.focus(x, list);
 }
 
@@ -524,6 +535,38 @@ async function refresh(force) {
   }
 }
 function tick() { refresh(); setTimeout(tick, 1000 - (Date.now() % 1000) + 5); }
+
+/* ------------------------------------------------------------ the stand face
+   Stood on a desk, a phone is a small, wide screen read from across a room.
+   The stand face is the clock cut down to what can be read from there: the
+   sentence, set as large as will fit, what line it is, and the time in the corner.
+   It comes on by itself on a short, wide screen (a phone on its side, a folded
+   phone standing like a tent). ?face=stand asks for it on any screen, and
+   ?face=full keeps the whole page.
+
+   This is the page running full screen, not iOS StandBy. StandBy only shows
+   widgets from installed apps, which a web page cannot provide. */
+const faceParam = new URLSearchParams(location.search).get("face");
+const standQuery = matchMedia("(max-height: 540px) and (min-aspect-ratio: 5/4)");
+function fit() {
+  const q = document.querySelector("#card .quote");
+  if (!q) return;
+  if (!document.documentElement.classList.contains("stand")) { q.style.removeProperty("--fit"); return; }
+  // The largest type at which nothing spills off the screen. A clock does not scroll.
+  const fits = () => document.documentElement.scrollHeight <= innerHeight + 1;
+  let lo = 14, hi = Math.round(Math.min(innerHeight * .17, innerWidth * .085));
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; q.style.setProperty("--fit", mid + "px"); if (fits()) lo = mid; else hi = mid; }
+  q.style.setProperty("--fit", lo + "px");
+}
+function setFace() {
+  document.documentElement.classList.toggle("stand", faceParam === "stand" || (faceParam !== "full" && standQuery.matches));
+  fit();
+}
+standQuery.addEventListener("change", setFace);
+addEventListener("resize", fit);
+if (document.fonts) document.fonts.ready.then(fit);
+// With the buttons gone, a tap on the sentence is how to see the minute's other departures.
+$("card").addEventListener("click", () => { if (document.documentElement.classList.contains("stand")) show(idx + 1); });
 
 function setRegion(r) {
   region = REGIONS[r] ? r : "";
@@ -943,6 +986,7 @@ async function stayAwake() {
 document.addEventListener("visibilitychange", stayAwake);
 stayAwake();
 
+setFace();
 tick();
 </script>
 
