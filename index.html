@@ -549,14 +549,14 @@ let list = [], idx = 0, shownKey = "", elsewhere = false;
 
 /* A fixed minute, for sharing
    index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
-   there, so a link can point at one particular train. Adding &pick=floridian
+   there, so a link can point at one particular train. Adding &pick=tokyo
    says which of that minute's trains to open on. Without ?at the clock follows
    the real time. */
 const pinned = (() => {
   const m = (new URLSearchParams(location.search).get("at") || "").match(/^(\d{1,2}):?(\d{2})$/);
   return m && +m[1] < 24 && +m[2] < 60 ? [+m[1], +m[2]] : null;
 })();
-// &pick=floridian goes with ?at and names the train to open on: a word or two from its name or its stations.
+// &pick=tokyo goes with ?at and names the train to open on: a word or two from its name or its stations.
 let picked = pinned ? (new URLSearchParams(location.search).get("pick") || "").trim().toLowerCase() : "";
 function clockNow() {
   const d = new Date();

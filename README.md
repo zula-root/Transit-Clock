@@ -3,15 +3,13 @@
 A clock made of timetables. Every minute it shows a real train, ferry or bus
 that is timetabled to leave at exactly that minute, somewhere in the world.
 
-> The **3:57 p.m.** Floridian leaves Washington Union Station for Chicago
-> Union Station.
+> The **7:12 a.m.** Nozomi leaves Tokyo for Hakata.
 >
-> *It reaches Chicago Union Station at 8:45 a.m., 17 hours and 48 minutes
-> later.*
+> *It reaches Hakata at 12:09 p.m., 4 hours and 57 minutes later.*
 
 **Live:** https://zula-root.github.io/Transit-Clock/
 
-![The Transit Clock on a phone folded into a tent on a desk, showing the 3:57 p.m. Floridian](docs/duo-stand.jpg)
+![The Transit Clock on a phone folded into a tent on a desk, showing the 7:12 a.m. Nozomi from Tokyo](docs/duo-stand.jpg)
 
 *The clock's stand face on a folded iPhone Duo. A rendering, not a photograph.*
 
@@ -98,7 +96,7 @@ A few options go on the end of the address:
 | --- | --- |
 | `?theme=dark` or `?theme=light` | Holds one theme whatever the device is set to. Dark suits a bedside. |
 | `?at=16:12` | Holds the clock at one minute, to share a single train. It reads the same on any day. |
-| `&pick=floridian` | With `?at`, opens on one train: a word or two from its name or its stations. |
+| `&pick=tokyo` | With `?at`, opens on one train: a word or two from its name or its stations. |
 | `?face=stand` | The stand face on any screen. `?face=full` keeps the whole page. |
 | `?region=eu` | Opens on one part of the world: `na`, `la`, `eu` or `ap`. |
 | `#widget` | A square card the size of a Home Screen widget. |
