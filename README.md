@@ -36,9 +36,11 @@ people name a train they mean to catch. This clock takes that literally.
 - **The sentence** is a real departure, with the time on a departure-board
   chip. Under it is the route as a board would show it, and a map that flies
   to the line.
-- **Your time** matches the minute on your clock to a station clock anywhere
-  in the world. **Leaving now** shows what is pulling out at this instant,
-  each on its own local clock.
+- **The time never changes.** It is always the time on your own clock, read
+  off a station clock somewhere else. The menu chooses which part of the
+  world that is: North America, Latin America, Europe & Africa or
+  Asia-Pacific. Where the timetables have nothing leaving from that region at
+  this minute, the clock says so and shows one from elsewhere.
 - **Another 4:12** steps through the other departures that share the minute.
   The space bar and the arrow keys do the same.
 - The date in the corner opens a card with the day's first and last
@@ -78,7 +80,7 @@ A few options go on the end of the address:
 | --- | --- |
 | `?theme=dark` or `?theme=light` | Holds one theme whatever the device is set to. Dark suits a bedside. |
 | `?at=16:12` | Holds the clock at one minute, to share a single train. |
-| `#live` | Opens in Leaving now. |
+| `?region=eu` | Opens on one part of the world: `na`, `la`, `eu` or `ap`. |
 | `#widget` | A square card the size of a Home Screen widget. |
 
 ## Run it locally

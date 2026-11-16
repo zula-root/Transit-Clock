@@ -103,15 +103,20 @@ header .right { display: flex; align-items: center; gap: 16px; }
 .fact-card a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
 .fact-card a:hover { text-decoration-style: solid; }
 
-.modes { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; }
-.modes button {
-  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--muted);
-  background: none; border: 0; border-radius: 999px; padding: 6px 12px 4px; cursor: pointer;
+/* The region menu: a plain select, dressed as a pill. A native menu is the right
+   control here: six choices, it works from the keyboard, and it opens as a wheel on a phone. */
+.region { position: relative; display: inline-flex; }
+.region select {
+  appearance: none; -webkit-appearance: none;
+  font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--fg);
+  background: none; border: 1px solid var(--line); border-radius: 999px; padding: 7px 30px 5px 14px; cursor: pointer;
 }
-.modes button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
-.modes .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; margin-right: 6px; vertical-align: 1px; }
-.modes button[aria-pressed="true"] .live-dot { background: var(--sign); animation: blink 1.6s infinite; }
-@keyframes blink { 50% { opacity: .25; } }
+.region select:hover { border-color: var(--fg); }
+.region::after {
+  content: ""; position: absolute; right: 13px; top: 50%; width: 5px; height: 5px; pointer-events: none;
+  border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: translateY(-75%) rotate(45deg);
+}
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 main {
   margin-top: auto; max-width: 46rem; min-width: 0;
@@ -185,7 +190,7 @@ footer button.next {
   font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--fg);
   background: none; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px 6px; cursor: pointer;
 }
-footer button.next:hover, .modes button:hover { color: var(--fg); }
+footer button.next:hover { color: var(--fg); }
 footer button.next:hover { border-color: var(--fg); }
 button:focus-visible, canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .map canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -211,7 +216,7 @@ body.widget .cite b { color: var(--bg); }
   .track { margin-block: 16px 4px; }
   header .now, header .sep { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { main { transition: none; } .modes .live-dot { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { main { transition: none; } }
 </style>
 </head>
 <body>
@@ -219,12 +224,18 @@ body.widget .cite b { color: var(--bg); }
 <header>
   <span class="brand">Transit Clock</span>
   <span class="right">
-    <span class="modes" role="group" aria-label="What to show">
-      <!-- The two modes used to be "Your clock" and "Live", which left it unclear whether the
-           train on screen was leaving now. The labels now say what each one shows. -->
-      <button type="button" id="mode-clock" aria-pressed="true" title="Departures timed to the minute on your clock, anywhere in the world">Your time</button>
-      <button type="button" id="mode-live" aria-pressed="false" title="Departures pulling out at this instant"><span class="live-dot"></span>Leaving now</button>
-    </span>
+    <!-- One menu, in place of two mode buttons. The time on screen never changes;
+         this only chooses which part of the world the departure comes from. -->
+    <label class="region">
+      <span class="visually-hidden">Part of the world</span>
+      <select id="region" title="Which part of the world the departure comes from">
+        <option value="">The world</option>
+        <option value="na">North America</option>
+        <option value="la">Latin America</option>
+        <option value="eu">Europe &amp; Africa</option>
+        <option value="ap">Asia-Pacific</option>
+      </select>
+    </label>
     <button type="button" class="today" id="about-btn" aria-expanded="false" aria-controls="about">About</button>
     <span class="now-wrap"><button type="button" class="today" id="today" aria-expanded="false" aria-controls="fact"></button><span class="sep" aria-hidden="true"> · </span><span class="now" id="now">--:--</span></span>
   </span>
@@ -233,7 +244,7 @@ body.widget .cite b { color: var(--bg); }
     <span class="eyebrow">About this clock</span>
     <p class="headline">A clock made of timetables.</p>
     <p class="body">Each minute it shows a real train, ferry or bus that is timetabled to leave at exactly that minute, somewhere in the world. There is one for all 1,440 minutes of the day.</p>
-    <p class="body"><b>Your time</b> matches the minute on your clock to a station clock anywhere. <b>Leaving now</b> shows what is pulling out at this instant.</p>
+    <p class="body">The time on screen is always the time on your own clock, read off a station clock somewhere else. The menu chooses which part of the world that is.</p>
     <p class="note">The idea is borrowed from the <a href="https://literature-clock.jenevoldsen.com/" target="_blank" rel="noopener">literary clock</a>, which tells the time with sentences from novels. Timetables turn out to be full of sentences too.</p>
     <div class="foot">Times come from the operators’ published timetables. Left open on a stand, the page keeps the screen awake.</div>
   </div>
@@ -280,13 +291,15 @@ const load = name => files[name] ??= fetch(`data/${name}.json`).then(r => { if (
      "PA138-Parada 7 / (M) Santa Lucía"    ->  "Santa Lucía"        Santiago stop codes
      "[CTB] TIN SHUI WAI|[KMB] TIN SHUI…"  ->  "Tin Shui Wai"       Hong Kong lists one name per operator
      "Stop 17 Moseley Square"              ->  "Moseley Square"     Adelaide stop numbers
-     "Godhra Jn", "Akola Jn."              ->  "Godhra Junction"    Indian Railways shorthand */
+     "Godhra Jn", "Akola Jn."              ->  "Godhra Junction"    Indian Railways shorthand
+     "Paris Montparnasse Hall 1 - 2"       ->  "Paris Montparnasse" SNCF names the concourse */
 function tidyStop(name) {
   let s = String(name).split("|")[0].replace(/\/?<br>.*$/i, "");    // the first of several operator names
   s = s.replace(/^\[[^\]]+\]\s*/, "")                               // "[CTB] "
-       .replace(/^[A-Z]{1,3}\d+-(?:Parada \d+ \/ )?/, "")            // "PA138-Parada 7 / "
+       .replace(/^[A-Z]{1,3}\d+-(?:Parada(?: \d+)? \/ )?/, "")       // "PA138-Parada 7 / ", "PI1858-Parada / "
        .replace(/^\(M\)\s*/, "")                                    // "(M) " marks a metro interchange
-       .replace(/^Stop \w+ /, "").replace(/ - (?:North|South|East|West) side$/, "");
+       .replace(/^Stop \w+ /, "").replace(/ - (?:North|South|East|West) side$/, "")
+       .replace(/ Hall \d(?: - \d)?$/, "");                            // "Paris Montparnasse Hall 1 - 2"
   // A name set entirely in capitals is a feed's habit, not the station's.
   if (s.length > 4 && s === s.toUpperCase() && /\p{L}/u.test(s)) s = s.toLowerCase().replace(/(^|[\s\-(\/])\p{L}/gu, c => c.toUpperCase());
   s = s.replace(/\bJn\b\.?/g, "Junction");
@@ -300,22 +313,8 @@ const hour = h => hours[h] ??= load(pad(h)).then(day => {
   return day;
 });
 
-const fmtCache = {};
-function localKey(tz, date) {
-  const f = fmtCache[tz] ??= new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-  return f.format(date);
-}
-let allEntries = null; // flattened, for live mode
-async function everything() {
-  if (allEntries) return allEntries;
-  const hours = await Promise.all(Array.from({ length: 24 }, (_, h) => hour(h)));
-  allEntries = [];
-  hours.forEach(day => Object.entries(day).forEach(([key, lst]) => lst.forEach(x => allEntries.push({ ...x, key }))));
-  return allEntries;
-}
 // keep departures that run on this weekday (bit 0 = Monday); if none do, show the rest rather than nothing
 const runsOn = (x, wd) => x.wd === undefined || (x.wd >> wd & 1);
-const weekdayIn = (tz, d) => ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short" }).format(d));
 function running(list, wdOf) {
   const today = list.filter(x => runsOn(x, wdOf(x)));
   return today.length ? today : list;
@@ -369,29 +368,40 @@ function viewerTime(min) {
 }
 const inViewerFormat = t => { const m = toMinutes(t); return m === null ? t : viewerTime(m); };
 
+/* ------------------------------------------------------------ regions
+   The time on screen is always the time on the reader's own clock. What the
+   reader can choose is which part of the world the departure comes from.
+
+   This replaced two modes, "Your time" and "Leaving now". The second showed
+   what was pulling out at that instant, each on its own local clock, so the
+   time in the sentence stopped matching the time on the wall, and nobody
+   could tell what had changed. A clock should not change the time. */
+const REGIONS = { na: "North America", la: "Latin America", eu: "Europe & Africa", ap: "Asia-Pacific" };
+const LATIN = /^America\/(Santiago|Mexico_City|Fortaleza|Sao_Paulo|Bogota|Lima|Buenos_Aires|Caracas|Montevideo|Guatemala|Panama|Havana|La_Paz|Asuncion)/;
+// Every departure carries the time zone of the place it leaves from, and that is enough to place it.
+function regionOf(x) {
+  const tz = x.tz || "";
+  // Africa has too few departures in these timetables to fill a menu entry of its own (about
+  // one minute in five), so it shares one with Europe. Georgia's railways are filed with Europe's too.
+  if (tz === "Asia/Tbilisi" || tz.startsWith("Europe/") || tz.startsWith("Africa/")) return "eu";
+  if (/^(Asia|Australia|Pacific)\//.test(tz)) return "ap";
+  if (tz.startsWith("America/")) return LATIN.test(tz) ? "la" : "na";
+  return "";
+}
+let region = "";   // "" is the whole world
+
 async function clockList(now) {
   const key = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
   const data = await hour(now.getHours());
   if (now.getMinutes() >= 55) hour((now.getHours() + 1) % 24).catch(() => {});
   const wd = (now.getDay() + 6) % 7;
-  const list = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
+  const all = (data[key] || []).map(x => ({ ...x, key, t: inViewerFormat(x.t), arr: inViewerFormat(x.arr) }));
   const shown = viewerTime(now.getHours() * 60 + now.getMinutes());
-  return { list: lead(running(list, () => wd), now), hint: `A real departure, timetabled for ${shown} on a station clock somewhere in the world.` };
-}
-async function liveList(now) {
-  const all = await everything();
-  const at = d => {
-    const keys = {};
-    const wds = {};
-    return running(all.filter(x => x.tz && x.key === (keys[x.tz] ??= localKey(x.tz, d))), x => (wds[x.tz] ??= weekdayIn(x.tz, d)));
-  };
-  let list = lead(at(now), now);
-  if (list.length) return { list, hint: `Leaving right now, each on its own local clock.` };
-  for (let k = 1; k <= 20; k++) {
-    list = lead(at(new Date(now.getTime() + k * 60000)), now);
-    if (list.length) return { list, hint: `Nothing leaves this exact minute. These go in ${k} min.` };
-  }
-  return { list: [], hint: "The world's timetables are quiet for a moment." };
+  // The chosen region comes first. Where these timetables have nothing leaving from it at this
+  // minute, the clock does not go blank or skip ahead: it says so, and shows the minute from elsewhere.
+  const local = region ? all.filter(x => regionOf(x) === region) : all;
+  if (region && !local.length) return { list: lead(running(all, () => wd), now), elsewhere: true, hint: `These timetables have no ${shown} in ${REGIONS[region]}. This one is from elsewhere.` };
+  return { list: lead(running(local, () => wd), now), hint: `A real departure, timetabled for ${shown} on a station clock somewhere in ${region ? REGIONS[region] : "the world"}.` };
 }
 
 /* ------------------------------------------------------------ words */
@@ -427,6 +437,7 @@ const city = tz => (tz || "").split("/").pop().replace(/_/g, " ");
 // "the 4:12", the way a person names the train they mean to catch ("the noon one" at noon)
 const short = t => t.replace(/ [ap]\.m\.$/, "");
 const theOne = t => /^\d/.test(t) ? `the ${short(t)}` : `the ${t} one`;
+const fromPlace = p => /^(United|Netherlands)/.test(p) ? `the ${p}` : p;   // "from the United States"
 
 /* split-flap: each character rattles through the board's alphabet, then settles left to right */
 const FLAP = { digit: "0123456789", letter: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" };
@@ -448,7 +459,7 @@ function flap(el, text) {
 }
 
 /* ------------------------------------------------------------ card */
-let list = [], idx = 0, mode = "clock", shownKey = "";
+let list = [], idx = 0, shownKey = "", elsewhere = false;
 
 /* A fixed minute, for sharing
    index.html?at=16:12 shows the clock as it reads at 4:12 p.m. and holds it
@@ -467,7 +478,9 @@ function clockNow() {
 function render(x) {
   const native = x.native;
   $("card").innerHTML = `
-    <p class="kicker">Every minute is somebody’s train. <b>${mode === "live" ? "This one is leaving now." : `This is ${esc(theOne(x.t))}.`}</b></p>
+    <p class="kicker">${elsewhere
+      ? `These timetables have no ${esc(short(x.t))} in ${esc(REGIONS[region])}. <b>This one is from ${esc(fromPlace(x.place))}.</b>`
+      : `Every minute is somebody’s train. <b>This is ${esc(theOne(x.t))}.</b>`}</p>
     <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}.
       <span class="then">${esc(sentence(afterword(x)))}</span></p>
     <div class="route" aria-hidden="true">
@@ -479,7 +492,7 @@ function render(x) {
   $("card").querySelectorAll("[data-flap]").forEach(el => flap(el, el.dataset.flap));
   $("count").textContent = list.length > 1 ? `${idx + 1} / ${list.length}` : "";
   // The button says what tapping it gives you: another train with this same time on its board.
-  $("next").textContent = mode === "clock" && /^\d/.test(x.t) ? `Another ${short(x.t)}` : "Another departure";
+  $("next").textContent = /^\d/.test(x.t) ? `Another ${short(x.t)}` : "Another departure";
   globe.focus(x, list);
 }
 
@@ -493,14 +506,14 @@ function show(i, fade = true) {
 
 async function refresh(force) {
   const now = clockNow();
-  const key = `${mode}|${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const key = `${region}|${pad(now.getHours())}:${pad(now.getMinutes())}`;
   $("now").textContent = viewerTime(now.getHours() * 60 + now.getMinutes());
   $("today").textContent = now.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
   if (key === shownKey && !force) return;
   shownKey = key;
   try {
-    const res = await (mode === "live" ? liveList(now) : clockList(now));
-    list = res.list;
+    const res = await clockList(now);
+    list = res.list; elsewhere = !!res.elsewhere;
     $("hint").textContent = res.hint;
     if (!list.length) { $("card").innerHTML = `<p class="status">${esc(res.hint)}</p>`; $("count").textContent = ""; return; }
     show(0, document.body.dataset.ready === "1");
@@ -512,11 +525,10 @@ async function refresh(force) {
 }
 function tick() { refresh(); setTimeout(tick, 1000 - (Date.now() % 1000) + 5); }
 
-function setMode(m) {
-  mode = m;
-  $("mode-clock").setAttribute("aria-pressed", m === "clock");
-  $("mode-live").setAttribute("aria-pressed", m === "live");
-  store.set("transit-clock-mode", m);
+function setRegion(r) {
+  region = REGIONS[r] ? r : "";
+  $("region").value = region;
+  store.set("transit-clock-region", region);
   refresh(true);
 }
 
@@ -906,21 +918,17 @@ document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("about"
 
 /* ------------------------------------------------------------ wiring */
 $("next").addEventListener("click", () => show(idx + 1));
-$("mode-clock").addEventListener("click", () => setMode("clock"));
-$("mode-live").addEventListener("click", () => setMode("live"));
+$("region").addEventListener("change", e => setRegion(e.target.value));
 document.addEventListener("keydown", e => {
-  if (e.target.closest("button")) return;
+  if (e.target.closest("button, select")) return;
   if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); show(idx + 1); }
   if (e.key === "ArrowLeft") show(idx - 1);
 });
 if (location.hash === "#widget") document.body.classList.add("widget");
-addEventListener("hashchange", () => {
-  document.body.classList.toggle("widget", location.hash === "#widget");
-  if (location.hash === "#live" || location.hash === "#clock") setMode(location.hash.slice(1));
-});
-mode = location.hash === "#live" ? "live" : store.get("transit-clock-mode") === "live" ? "live" : "clock";
-$("mode-clock").setAttribute("aria-pressed", mode === "clock");
-$("mode-live").setAttribute("aria-pressed", mode === "live");
+addEventListener("hashchange", () => document.body.classList.toggle("widget", location.hash === "#widget"));
+// ?region=eu opens on one part of the world. Otherwise the last choice is remembered.
+region = (r => REGIONS[r] ? r : "")(new URLSearchParams(location.search).get("region") ?? store.get("transit-clock-region") ?? "");
+$("region").value = region;
 
 /* Stay awake
    Left open on a phone or tablet stand, this is a desk clock, and a desk clock
