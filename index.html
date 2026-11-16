@@ -570,7 +570,7 @@ function render(x) {
     <p class="kicker">${elsewhere
       ? `These timetables have no ${esc(short(x.t))} in ${esc(REGIONS[region])}. <b>This one is from ${esc(fromPlace(x.place))}.</b>`
       : `Every minute is somebody’s train. <b>This is ${esc(theOne(x.t))}.</b>`}</p>
-    <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}.
+    <p class="quote">The <span class="time" data-flap="${esc(x.t)}">${esc(x.t)}</span> ${esc(x.v)} leaves ${esc(x.from)} for ${esc(x.to)}${x.to.endsWith(".") ? "" : "."}
       <span class="then">${esc(sentence(afterword(x)))}</span></p>
     <div class="route" aria-hidden="true">
       <div class="stop"><span class="name" data-flap="${esc(x.from)}"></span>${native ? `<span class="native">${esc(native[0])}</span>` : ""}<span class="clock">DEP ${esc(x.t)}</span></div>
