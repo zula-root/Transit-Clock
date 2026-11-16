@@ -153,6 +153,10 @@ header .add-btn:hover, header .add-btn[aria-expanded="true"] { color: var(--fg);
   align-self: flex-start; font-family: var(--sans); font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
   color: var(--sign-ink); background: var(--sign); border: 0; border-radius: 999px; padding: 9px 16px 7px; cursor: pointer;
 }
+/* Who made it, said quietly, on a line of its own at the foot of the page. */
+footer .made { flex-basis: 100%; margin: 0; font-family: var(--mono); font-size: 10px; letter-spacing: .08em; }
+footer .made a { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+footer .made a:hover { color: var(--fg); text-decoration-style: solid; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 main {
@@ -335,6 +339,7 @@ body.widget .cite b { color: var(--bg); }
     <span class="count" id="count"></span>
     <button class="next" id="next" type="button">Another departure</button>
   </span>
+  <p class="made">Made with <span role="img" aria-label="love">❤️</span> by <a href="https://zularoot.com/" target="_blank" rel="noopener">Zula Root</a></p>
 </footer>
 
 <script>
