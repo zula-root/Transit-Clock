@@ -297,7 +297,29 @@ body.widget .cite b { color: var(--bg); }
 .stand .quote { font-size: var(--fit, 2rem); line-height: 1.2; }
 .stand .cite { font-size: 11px; }
 @media (prefers-reduced-motion: reduce) { main { transition: none; } .region .names span { animation: none !important; } }
+/* Embedded in another page (?embed=1): only the clock itself, on that page's own
+   background (?bg=f7f5f0), with no header, footer or switch, at its natural height. */
+html.embed, html.embed body { height: auto; }
+html.embed { padding: 0; }
+html.embed body { padding: 0; background: transparent; }
+html.embed header, html.embed footer, html.embed .pair { display: none !important; }
+html.embed main { margin-top: 0; padding-block: 0; }
+html.embed .map, html.embed .day { margin-bottom: 0; }
+html.embed .map canvas { max-height: none; }
 </style>
+<script>
+/* Embedded in another page: tell it how tall the clock is, so it can fit the frame. */
+{ const p = new URLSearchParams(location.search);
+  if (p.has("embed")) {
+    const root = document.documentElement;
+    root.classList.add("embed");
+    const bg = p.get("bg") || "";
+    if (/^[0-9a-f]{6}$/i.test(bg)) root.style.setProperty("--bg", "#" + bg);
+    const tell = () => parent.postMessage({ sentenceClock: location.pathname, height: Math.ceil(document.body.getBoundingClientRect().height) }, "*");
+    addEventListener("DOMContentLoaded", () => { new ResizeObserver(tell).observe(document.body); tell(); });
+  }
+}
+</script>
 </head>
 <body>
 
